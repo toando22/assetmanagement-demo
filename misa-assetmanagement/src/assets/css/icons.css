@@ -1,0 +1,480 @@
+/*
+  Mô tả: File CSS chứa icon classes sử dụng CSS mask với qlts-icon.svg
+  - Sử dụng mask-image với mask-position để lấy icon từ sprite
+  - Icon utility classes
+  - Responsive icon sizing
+  
+  Cách sử dụng:
+  <i class="icon icon-notification"></i>
+  <i class="icon icon--sm icon-user"></i>
+  
+  CreatedBy: DDToan - (09/1/2026)
+  
+  EditBy: 
+*/
+
+/* ============================================ */
+/* ICON BASE - Sử dụng CSS Mask                 */
+/* ============================================ */
+
+/*
+  Tất cả icons sử dụng chung 1 file sprite: qlts-icon.svg
+  Mỗi icon sẽ có mask-position riêng để chọn vị trí trong sprite
+*/
+
+/* ============================================ */
+/* ICON BASE STYLES                             */
+/* ============================================ */
+
+.icon {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  background-color: currentColor;
+  -webkit-mask-image: url('@/assets/icons/qlts-icon.svg');
+  mask-image: url('@/assets/icons/qlts-icon.svg');
+  -webkit-mask-size: 504px 754px; /* Kích thước của qlts-icon.svg */
+  mask-size: 504px 754px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  flex-shrink: 0;
+  transition: all var(--transition-fast, 150ms);
+}
+
+/* Icon Sizes */
+.icon--xs {
+  width: 12px;
+  height: 12px;
+}
+
+.icon--sm {
+  width: 16px;
+  height: 16px;
+}
+
+.icon--md {
+  width: 20px;
+  height: 20px;
+}
+
+.icon--lg {
+  width: 32px;
+  height: 32px;
+}
+
+.icon--xl {
+  width: 48px;
+  height: 48px;
+}
+
+/* Icon Colors */
+.icon--primary {
+  color: var(--color-primary, #0095da);
+}
+
+.icon--success {
+  color: var(--color-success, #00a76a);
+}
+
+.icon--danger {
+  color: var(--color-danger, #e01e01);
+}
+
+.icon--warning {
+  color: var(--color-warning, #ff9300);
+}
+
+.icon--white {
+  color: #ffffff;
+}
+
+.icon--gray {
+  color: var(--color-text-gray, #999999);
+}
+
+/* Icon States */
+.icon--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon--clickable {
+  cursor: pointer;
+}
+
+.icon--clickable:hover {
+  opacity: 0.8;
+}
+
+/* Icon in Buttons */
+.btn .icon {
+  margin-right: var(--spacing-xs, 4px);
+}
+
+.btn--icon-only .icon {
+  margin: 0;
+}
+
+/* ============================================ */
+/* HEADER ICONS - Mask Position                 */
+/* ============================================ */
+
+/*
+  Hướng dẫn tìm mask-position:
+  1. Mở file qlts-icon.svg trong trình duyệt hoặc design tool
+  2. Xác định vị trí (x, y) của icon trong sprite (tính từ góc trên trái)
+  3. Điền vào mask-position: -Xpx -Ypx
+  
+  Ví dụ: Icon ở vị trí (100, 200) → mask-position: -100px -200px
+*/
+
+/* Icon Notification - Thông báo */
+.icon-notification {
+  width: 16px;
+  height: 20px;
+  mask-position: -332px -109px;
+}
+
+/* Icon Grid - Lưới/App Grid */
+.icon-grid {
+  width: 18px;
+  height: 18px;
+  mask-position: -199px -23px;
+}
+
+/* Icon Help - Trợ giúp */
+.icon-help {
+  width: 18px;
+  height: 18px;
+  mask-position: -67px -67px;
+}
+
+/* Icon User - Người dùng */
+.icon-user {
+  width: 18px;
+  height: 18px;
+  mask-position: -23px -23px;
+}
+
+/* Icon Chevron Down - Mũi tên xuống */
+.icon-chevron-down {
+  width: 12px;
+  height: 7px;
+  -webkit-mask-position: -158px -293px;
+  mask-position: -158px -293px;
+}
+
+/* Icon Chevron Up - Mũi tên lên (cho number input spinner) */
+.icon-chevron-up {
+  width: 12px;
+  height: 7px;
+  -webkit-mask-position: -158px -286px;
+  mask-position: -158px -286px;
+}
+
+/* Icon Check - Dấu tick */
+.icon-check {
+  width: 10px;
+  height: 8px;
+  -webkit-mask-position: -160px -424px;
+  mask-position: -160px -424px;
+}
+
+/* ============================================ */
+/* SIDEBAR ICONS - Mask Position                */
+/* ============================================ */
+
+/* Icon Logo MISA - Logo trong sidebar header */
+.icon-logo-misa {
+  width: 36px;
+  height: 36px;
+  -webkit-mask-position: -20px -680px;
+  mask-position: -20px -680px;
+}
+
+/* Icon Dashboard - Tổng quan */
+.icon-dashboard {
+  width: 24px;
+  height: 24px;
+  -webkit-mask-position: -20px -196px;
+  mask-position: -20px -196px;
+}
+
+/* Icon Asset - Tài sản */
+.icon-asset {
+  width: 24px;
+  height: 24px;
+  -webkit-mask-position: -64px -196px;
+  mask-position: -64px -196px;
+}
+
+/* Icon Asset HT-ĐB - Tài sản hình thành trong đầu tư */
+.icon-asset-htdb {
+  width: 24px;
+  height: 24px;
+  -webkit-mask-position: -108px -196px;
+  mask-position: -108px -196px;
+}
+
+/* Icon Tools - Công cụ dụng cụ */
+.icon-tools {
+  width: 24px;
+  height: 24px;
+  -webkit-mask-position: -152px -196px;
+  mask-position: -152px -196px;
+}
+
+/* Icon Category - Danh mục */
+.icon-category {
+  width: 24px;
+  height: 24px;
+  -webkit-mask-position: -196px -196px;
+  mask-position: -196px -196px;
+}
+
+/* Icon Search - Tra cứu */
+.icon-search {
+  width: 24px;
+  height: 24px;
+  -webkit-mask-position: -240px -196px;
+  mask-position: -240px -196px;
+}
+
+/* Icon Report - Báo cáo */
+.icon-report {
+  width: 24px;
+  height: 24px;
+  -webkit-mask-position: -284px -196px;
+  mask-position: -284px -196px;
+}
+
+/* Icon Chevron Left - Mũi tên trái (cho toggle button) */
+.icon-chevron-left {
+  width: 6px;
+  height: 10px;
+  -webkit-mask-position: -46px -338px;
+  mask-position: -46px -338px;
+}
+
+/* Icon Chevron Right - Mũi tên phải (cho toggle button) */
+.icon-chevron-right {
+  width: 6px;
+  height: 10px;
+  -webkit-mask-position: -59px -338px;
+  mask-position: -59px -338px;
+}
+
+/* ============================================ */
+/* ACTION ICONS - Mask Position                 */
+/* ============================================ */
+/* Icon search - Tìm kiếm */
+.icon-search-toolbar {
+  width: 18px;
+  height: 18px;
+  -webkit-mask-position: -243px -23px;
+  mask-position: -243px -23px;
+}
+/* Icon Add - Thêm */
+.icon-add {
+  width: 10px;
+  height: 10px;
+  -webkit-mask-position: -467px -423px;
+  mask-position: -467px -423px;
+}
+
+/* Icon Edit - Sửa */
+.icon-edit {
+  width: 16px;
+  height: 16px;
+  -webkit-mask-position: -156px -68px;
+  mask-position: -156px -68px;
+}
+
+/* Icon Delete - Xóa */
+.icon-delete {
+  width: 18px;
+  height: 18px;
+  -webkit-mask-position: -463px -111px;
+  mask-position: -463px -111px;
+  background-color: #e01e01;
+}
+
+/* Icon Duplicate/Copy - Nhân bản */
+.icon-duplicate {
+  width: 16px;
+  height: 16px;
+  -webkit-mask-position: -244px -112px;
+  mask-position: -244px -112px;
+}
+
+.icon-copy {
+  width: 16px;
+  height: 18px;
+  -webkit-mask-position: -243px -23px;
+  mask-position: -243px -23px;
+}
+
+/* Icon Filter - Lọc */
+.icon-filter {
+  width: 17px;
+  height: 16px;
+  -webkit-mask-position: -243px -69px;
+  mask-position: -243px -69px;
+}
+
+/* Icon Excel - Xuất Excel */
+.icon-excel {
+  width: 18px;
+  height: 17px;
+  -webkit-mask-position: -287px -111px;
+  mask-position: -287px -111px;
+}
+
+/* Icon Close - Đóng */
+.icon-close {
+  mask-position: -375px -287px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Icon Calendar - Lịch */
+.icon-calendar {
+  width: 18px;
+  height: 18px;
+  -webkit-mask-position: -287px -67px; /* TODO: Bạn cần điền vị trí chính xác */
+  mask-position: -287px -67px;
+}
+
+/* Icon Warning - Cảnh báo (Triangle warning icon) */
+.icon-warning {
+  width: 24px;
+  height: 20px;
+  -webkit-mask-position: -416px -66px; /* TODO: Điền mask-position từ SVG */
+  mask-position: -416px -66px;
+  transform: scale(2);
+}
+/* Icon Chevron Up Toolbar - Mũi tên lên phần toolbar */
+.icon-chevron-up-toolbar {
+  width: 8px;
+  height: 5px;
+  -webkit-mask-position: -28px -338px;
+  mask-position: -28px -338px;
+}
+
+/* Icon Chevron Down Toolbar - Mũi tên xuống phần toolbar */
+.icon-chevron-down-toolbar {
+  width: 8px;
+  height: 5px;
+  -webkit-mask-position: -72px -338px;
+  mask-position: -72px -338px;
+}
+/* ============================================ */
+/* UTILITY CLASSES                              */
+/* ============================================ */
+
+/* Icon với text */
+.icon-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs, 4px);
+}
+
+/* Icon button */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs, 4px);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 2px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 150ms);
+}
+
+.icon-btn:hover {
+  background-color: var(--color-bg-hover, #f8f8f8);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Icon badge (với số đếm) */
+.icon-badge {
+  position: relative;
+  display: inline-block;
+}
+
+.icon-badge__count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background-color: var(--color-danger, #e01e01);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 8px;
+  border: 2px solid white;
+}
+
+/* Icon với tooltip */
+.icon-tooltip {
+  position: relative;
+  cursor: pointer;
+}
+
+.icon-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Icon rotation animations */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.icon--rotate {
+  animation: rotate 1s linear infinite;
+}
+
+/* Icon pulse animation */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.icon--pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
