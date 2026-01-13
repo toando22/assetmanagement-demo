@@ -8,10 +8,7 @@
 
 <template>
   <div class="ms-dropdown" :class="{ 'ms-dropdown--open': isOpen }">
-    <div 
-      class="ms-dropdown__trigger"
-      @click="toggleDropdown"
-    >
+    <div class="ms-dropdown__trigger" @click="toggleDropdown">
       <span class="ms-dropdown__text">{{ selectedText }}</span>
       <i class="ms-dropdown__arrow icon icon-chevron-down-toolbar"></i>
     </div>
@@ -90,24 +87,24 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 const props = defineProps({
   modelValue: {
     type: [String, Number, Array],
-    default: ''
+    default: '',
   },
   options: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   placeholder: {
     type: String,
-    default: 'Roboto - 14pt - Regular'
+    default: 'Roboto - 14pt - Regular',
   },
   withCheckbox: {
     type: Boolean,
-    default: false
+    default: false,
   },
   withTable: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
@@ -121,8 +118,8 @@ const selectedText = computed(() => {
     }
     return `${props.modelValue.length} selected`
   }
-  
-  const selected = props.options.find(opt => opt.value === props.modelValue)
+
+  const selected = props.options.find((opt) => opt.value === props.modelValue)
   if (selected) {
     return selected.label
   }
@@ -151,16 +148,16 @@ const toggleCheckbox = (option) => {
     emit('update:modelValue', [option.value])
     return
   }
-  
+
   const newValue = [...props.modelValue]
   const index = newValue.indexOf(option.value)
-  
+
   if (index > -1) {
     newValue.splice(index, 1)
   } else {
     newValue.push(option.value)
   }
-  
+
   emit('update:modelValue', newValue)
   emit('change', newValue)
 }
@@ -292,7 +289,7 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-.ms-dropdown__item--checkbox input[type="checkbox"] {
+.ms-dropdown__item--checkbox input[type='checkbox'] {
   margin: 0;
   cursor: pointer;
 }
@@ -345,7 +342,9 @@ onBeforeUnmount(() => {
 /* Transition */
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .dropdown-fade-enter-from,

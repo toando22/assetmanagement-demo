@@ -6,7 +6,10 @@
 -->
 
 <template>
-  <div class="ms-input-number" :class="{ 'ms-input-number--error': error, 'ms-input-number--disabled': disabled }">
+  <div
+    class="ms-input-number"
+    :class="{ 'ms-input-number--error': error, 'ms-input-number--disabled': disabled }"
+  >
     <label v-if="label" class="ms-input-number__label" :for="inputId">
       {{ label }}
       <span v-if="required" class="ms-input-number__required">*</span>
@@ -64,44 +67,44 @@ import { computed } from 'vue'
 const props = defineProps({
   modelValue: {
     type: [String, Number],
-    default: 0
+    default: 0,
   },
   label: {
     type: String,
-    default: ''
+    default: '',
   },
   placeholder: {
     type: String,
-    default: ''
+    default: '',
   },
   disabled: {
     type: Boolean,
-    default: false
+    default: false,
   },
   error: {
     type: Boolean,
-    default: false
+    default: false,
   },
   errorMessage: {
     type: String,
-    default: 'Error message'
+    default: 'Error message',
   },
   required: {
     type: Boolean,
-    default: false
+    default: false,
   },
   min: {
     type: Number,
-    default: undefined
+    default: undefined,
   },
   max: {
     type: Number,
-    default: undefined
+    default: undefined,
   },
   step: {
     type: Number,
-    default: 1
-  }
+    default: 1,
+  },
 })
 
 const emit = defineEmits(['update:modelValue', 'focus', 'blur'])
@@ -114,7 +117,7 @@ const handleInput = (event) => {
     emit('update:modelValue', '')
     return
   }
-  
+
   const numValue = Number(value)
   if (props.min !== undefined && numValue < props.min) {
     value = props.min
@@ -122,7 +125,7 @@ const handleInput = (event) => {
   if (props.max !== undefined && numValue > props.max) {
     value = props.max
   }
-  
+
   emit('update:modelValue', value)
 }
 

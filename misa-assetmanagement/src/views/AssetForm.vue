@@ -686,4 +686,36 @@ const handleCancel = () => {
   flex-direction: column;
   width: 100%;
 }
+
+/* Icon chevron cho dropdown trong form - ẩn icon mặc định */
+.asset-form__field :deep(.ms-dropdown__arrow) {
+  display: none;
+}
+
+/* Icon chevron-down khi đóng - căn giữa */
+.asset-form__field :deep(.ms-dropdown__trigger)::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 5px;
+  pointer-events: none;
+  -webkit-mask-image: url('@/assets/icons/qlts-icon.svg');
+  mask-image: url('@/assets/icons/qlts-icon.svg');
+  -webkit-mask-size: 504px 754px;
+  mask-size: 504px 754px;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: -72px -338px; /* icon-chevron-down-toolbar - mặc định */
+  mask-position: -72px -338px;
+  background-color: #595959;
+}
+
+/* Icon chevron-up khi mở - tại đúng vị trí của chevron-down (căn giữa) */
+.asset-form__field :deep(.ms-dropdown--open .ms-dropdown__trigger)::after {
+  -webkit-mask-position: -28px -338px !important; /* icon-chevron-up-toolbar */
+  mask-position: -28px -338px !important;
+}
 </style>

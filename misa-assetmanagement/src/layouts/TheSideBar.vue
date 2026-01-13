@@ -58,14 +58,16 @@
       </ul>
     </nav>
 
-    <!-- Toggle Button -->
-    <button 
-      class="sidebar__toggle" 
-      @click="toggleSidebar"
-      :title="isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'"
-    >
-      <i :class="['icon', 'icon--sm', isCollapsed ? 'icon-chevron-right' : 'icon-chevron-left']"></i>
-    </button>
+    <!-- Footer với Toggle Button -->
+    <div class="sidebar__footer">
+      <button 
+        class="sidebar__toggle" 
+        @click="toggleSidebar"
+        :title="isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'"
+      >
+        <i :class="['icon', 'icon--sm', isCollapsed ? 'icon-chevron-right' : 'icon-chevron-left']"></i>
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -87,7 +89,7 @@ const activeMenu = ref('tai-san') // Menu active mặc định
 // Danh sách menu items
 const menuItems = ref([
   { id: 'tong-quan', label: 'Tổng quan', icon: 'dashboard', hasSubmenu: false, isOpen: false },
-  { id: 'tai-san', label: 'Tài sản', icon: 'asset', hasSubmenu: false, isOpen: false },
+  { id: 'tai-san', label: 'Tài sản', icon: 'asset', hasSubmenu: true, isOpen: false },
   { id: 'tai-san-htdb', label: 'Tài sản HT-ĐB', icon: 'asset-htdb', hasSubmenu: true, isOpen: false },
   { id: 'cong-cu', label: 'Công cụ dụng cụ', icon: 'tools', hasSubmenu: true, isOpen: false },
   { id: 'danh-muc', label: 'Danh mục', icon: 'category', hasSubmenu: false, isOpen: false },
@@ -164,10 +166,10 @@ const handleMenuClick = (item) => {
   justify-content: center;
 }
 
-.sidebar__logo .icon {
+.sidebar__logo .icon.icon-logo-misa {
   width: 40px;
   height: 40px;
-  color: var(--color-white);
+  background-color: transparent;
 }
 
 .sidebar__title {
@@ -318,12 +320,22 @@ const handleMenuClick = (item) => {
   visibility: visible;
 }
 
+/* Footer */
+.sidebar__footer {
+  padding: var(--spacing-md);
+  border-top: none;
+}
+
+/* Khi sidebar mở rộng: thêm border-top cho footer */
+.sidebar:not(.sidebar--collapsed) .sidebar__footer {
+  border-top: 1px solid #E0E0E0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
 /* Toggle Button */
 .sidebar__toggle {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 32px;
   height: 32px;
   border-radius: 4px;
@@ -337,6 +349,18 @@ const handleMenuClick = (item) => {
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* Khi sidebar mở rộng: đặt nút về bên phải */
+.sidebar:not(.sidebar--collapsed) .sidebar__toggle {
+  /* Nút đã được căn về bên phải bởi flex-end của footer */
+}
+
+/* Khi sidebar thu gọn: căn giữa nút */
+.sidebar--collapsed .sidebar__footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .sidebar__toggle:hover {
   background-color: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.3);
@@ -344,7 +368,7 @@ const handleMenuClick = (item) => {
 }
 
 .sidebar__toggle:active {
-  transform: translateX(-50%) scale(0.95);
+  transform: scale(0.95);
   background-color: rgba(255, 255, 255, 0.12);
 }
 

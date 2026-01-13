@@ -31,8 +31,8 @@
   width: 24px;
   height: 24px;
   background-color: currentColor;
-  -webkit-mask-image: url('@/assets/icons/qlts-icon.svg');
-  mask-image: url('@/assets/icons/qlts-icon.svg');
+  -webkit-mask-image: url('/qlts-icon.svg');
+  mask-image: url('/qlts-icon.svg');
   -webkit-mask-size: 504px 754px; /* Kích thước của qlts-icon.svg */
   mask-size: 504px 754px;
   -webkit-mask-repeat: no-repeat;
@@ -188,8 +188,15 @@
 .icon-logo-misa {
   width: 36px;
   height: 36px;
-  -webkit-mask-position: -20px -680px;
-  mask-position: -20px -680px;
+  /* Sử dụng background-image như trong ảnh 1 */
+  background-image: url('/qlts-icon.svg');
+  background-position: -20px -680px;
+  background-repeat: no-repeat;
+  background-size: 504px 754px;
+  /* Tắt mask-image */
+  -webkit-mask-image: none;
+  mask-image: none;
+  background-color: transparent;
 }
 
 /* Icon Dashboard - Tổng quan */
@@ -250,18 +257,18 @@
 
 /* Icon Chevron Left - Mũi tên trái (cho toggle button) */
 .icon-chevron-left {
-  width: 6px;
-  height: 10px;
-  -webkit-mask-position: -46px -338px;
-  mask-position: -46px -338px;
+  width: 8px;
+  height: 12px;
+  -webkit-mask-position: -28px -290px;
+  mask-position: -28px -290px;
 }
 
 /* Icon Chevron Right - Mũi tên phải (cho toggle button) */
 .icon-chevron-right {
-  width: 6px;
-  height: 10px;
-  -webkit-mask-position: -59px -338px;
-  mask-position: -59px -338px;
+  width: 8px;
+  height: 12px;
+  -webkit-mask-position: -72px -290px;
+  mask-position: -72px -290px;
 }
 
 /* ============================================ */
@@ -351,7 +358,7 @@
   height: 20px;
   -webkit-mask-position: -416px -66px; /* TODO: Điền mask-position từ SVG */
   mask-position: -416px -66px;
-  transform: scale(2);
+  transform: scale(1);
 }
 /* Icon Chevron Up Toolbar - Mũi tên lên phần toolbar */
 .icon-chevron-up-toolbar {
@@ -367,6 +374,13 @@
   height: 5px;
   -webkit-mask-position: -72px -338px;
   mask-position: -72px -338px;
+}
+.icon-ellipsis {
+  width: 13px;
+  height: 3px;
+  -webkit-mask-position: -422px -31px;
+  mask-position: -422px -31px;
+  background-color: black;
 }
 /* ============================================ */
 /* UTILITY CLASSES                              */

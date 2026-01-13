@@ -24,10 +24,15 @@
 
       <!-- Filter: Năm với label bên trong -->
       <div class="header__year-filter">
-        <span class="header__year-label">Năm</span>
-        <select class="header__year-select" v-model="selectedYear">
-          <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-        </select>
+        <MsDropdown
+          v-model="selectedYear"
+          :options="yearOptions"
+          placeholder="Năm"
+          class="header__year-dropdown"
+        />
+        <!-- 2 icon cố định (mũi tên lên và xuống) -->
+        <i class="icon icon-chevron-up-toolbar header__year-icon-up"></i>
+        <i class="icon icon-chevron-down-toolbar header__year-icon-down"></i>
       </div>
 
       <!-- Divider -->
@@ -103,6 +108,7 @@
 */
 
 import { ref, computed } from 'vue'
+import MsDropdown from '@/components/base/ms-dropdown/MsDropdown.vue'
 
 // Props
 const props = defineProps({
@@ -124,6 +130,14 @@ const years = computed(() => {
     yearsList.push(currentYear - i)
   }
   return yearsList
+})
+
+// Options cho dropdown năm - chỉ hiển thị năm trong dropdown
+const yearOptions = computed(() => {
+  return years.value.map(year => ({
+    value: year,
+    label: year.toString()
+  }))
 })
 
 /*
@@ -253,64 +267,126 @@ const handleLogout = () => {
 /* Year Filter Container */
 .header__year-filter {
   position: relative;
-  display: flex;
-  align-items: center;
   height: 30px;
   min-width: 112px;
-  background-color: rgba(26, 164, 200, 0.2);
-  border: 1px solid rgba(26, 164, 200, 0.4);
-  border-radius: 3px;
-  padding: 0 8px 0 12px;
-  gap: 8px;
 }
 
-/* Label "Năm" bên trong */
-.header__year-label {
-  font-size: 13px;
-  color: #001031;
-  font-weight: 500;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-/* Select năm */
-.header__year-select {
-  flex: 1;
+/* Dropdown năm - style giống 100% hình ảnh 2 */
+.header__year-dropdown {
+  width: 100%;
   height: 100%;
-  border: none;
-  background: transparent;
-  color: #001031;
+}
+
+.header__year-dropdown :deep(.ms-dropdown__trigger) {
+  height: 30px;
+  padding: 0 32px 0 12px;
+  border: 1px solid #1aa4c8;
+  border-radius: 3px;
+  background-color: #e6f7ff;
   font-size: 13px;
   font-weight: 700;
+  color: #001031;
+  display: flex;
+  align-items: center;
   cursor: pointer;
-  outline: none;
-  padding: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  text-align: right;
-  padding-right: 16px;
+  position: relative;
+  box-sizing: border-box;
 }
 
-/* Custom dropdown arrow */
-.header__year-filter::after {
-  content: '';
+/* Text "Năm" và năm - style riêng, thêm "Năm " vào trước */
+.header__year-dropdown :deep(.ms-dropdown__text) {
+  display: inline;
+  font-weight: 700;
+  color: #001031;
+}
+
+.header__year-dropdown :deep(.ms-dropdown__text)::before {
+  content: 'Năm ';
+  font-weight: 700;
+  color: #001031;
+}
+
+/* Ẩn icon chevron mặc định - không chuyển động */
+.header__year-dropdown :deep(.ms-dropdown__arrow) {
+  display: none;
+}
+
+/* 2 icon cố định (mũi tên lên và xuống) - sử dụng class icon convention */
+.header__year-icon-up,
+.header__year-icon-down {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid #001031;
   pointer-events: none;
+  z-index: 1;
 }
 
-.header__year-select option {
-  background-color: white;
-  color: #001031;
+.header__year-icon-up {
+  top: calc(50% - 4px);
+}
+
+.header__year-icon-down {
+  top: calc(50% + 4px);
+}
+
+/* Dropdown menu */
+.header__year-dropdown :deep(.ms-dropdown__menu) {
+  width: max-content;
+  min-width: 100%;
+  left: 0;
+  right: auto;
+  top: calc(100% + 4px);
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* List items */
+.header__year-dropdown :deep(.ms-dropdown__list) {
+  width: 100%;
+  display: block;
+}
+
+/* Item - phủ toàn bộ width */
+.header__year-dropdown :deep(.ms-dropdown__item) {
+  width: 100% !important;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
   font-weight: 700;
+  color: #001031;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+/* Item hover - màu xanh nhạt giống dropdown trong popup */
+.header__year-dropdown :deep(.ms-dropdown__item:hover) {
+  background-color: #e6f7ff;
+}
+
+/* Item selected - màu xanh nhạt với checkmark giống mẫu hình 2 */
+.header__year-dropdown :deep(.ms-dropdown__item--selected) {
+  background-color: #e6f7ff;
+  color: #001031;
+}
+
+.header__year-dropdown :deep(.ms-dropdown__item--selected:hover) {
+  background-color: #e6f7ff;
+  color: #001031;
+}
+
+/* Hiển thị icon check cho item được chọn */
+.header__year-dropdown :deep(.ms-dropdown__check) {
+  display: block;
+  width: 16px;
+  height: 16px;
+  color: #1aa4c8;
+  flex-shrink: 0;
 }
 
 /* Divider */

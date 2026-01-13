@@ -11,7 +11,7 @@
   EditBy:
 */
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, unref } from 'vue'
 
 /**
  * Composable để quản lý logic phân trang
@@ -38,8 +38,11 @@ export function usePagination(options = {}) {
 
   // Computed: Tổng số trang
   const totalPages = computed(() => {
-    const totalValue = typeof total === 'function' ? total.value : total
-    return Math.ceil(totalValue / pageSize.value) || 1
+    // Sử dụng unref để lấy giá trị từ ref hoặc computed
+    const totalValue = unref(total)
+    const result = Math.ceil(totalValue / pageSize.value) || 1
+    console.log('usePagination - Total:', totalValue, 'PageSize:', pageSize.value, 'TotalPages:', result)
+    return result
   })
 
   // Computed: Chỉ số bắt đầu (0-based)
@@ -52,21 +55,68 @@ export function usePagination(options = {}) {
     return startIndex.value + pageSize.value
   })
 
-  // Computed: Danh sách các trang hiển thị
+  // Computed: Danh sách các trang hiển thị với ellipsis
   const visiblePages = computed(() => {
     const pages = []
-    let startPage = Math.max(1, currentPage.value - Math.floor(maxVisiblePages / 2))
-    let endPage = Math.min(totalPages.value, startPage + maxVisiblePages - 1)
-
-    // Điều chỉnh startPage nếu endPage quá gần cuối
-    if (endPage - startPage < maxVisiblePages - 1) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1)
+    const totalPagesValue = totalPages.value
+    const current = currentPage.value
+    
+    if (totalPagesValue <= 1) {
+      return [1]
     }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i)
+    
+    // Nếu chỉ có ít trang (<= 5), hiển thị tất cả
+    if (totalPagesValue <= 5) {
+      for (let i = 1; i <= totalPagesValue; i++) {
+        pages.push(i)
+      }
+      return pages
     }
-
+    
+    // Luôn hiển thị trang đầu
+    pages.push(1)
+    
+    // Nếu currentPage gần đầu (trang 1, 2, 3)
+    if (current <= 3) {
+      // Hiển thị: 1, 2, 3, ..., 10
+      if (current === 1) {
+        if (totalPagesValue > 1) {
+          pages.push(2)
+        }
+      } else if (current === 2) {
+        pages.push(2, 3)
+      } else {
+        pages.push(2, 3, 4)
+      }
+      // Thêm ellipsis và trang cuối nếu cần
+      if (totalPagesValue > 4) {
+        pages.push('ellipsis-end')
+      }
+      if (totalPagesValue > 1) {
+        pages.push(totalPagesValue)
+      }
+    }
+    // Nếu currentPage gần cuối
+    else if (current >= totalPagesValue - 2) {
+      // Hiển thị: 1, ..., 8, 9, 10
+      pages.push('ellipsis-start')
+      if (current === totalPagesValue) {
+        pages.push(totalPagesValue - 1, totalPagesValue)
+      } else if (current === totalPagesValue - 1) {
+        pages.push(totalPagesValue - 2, totalPagesValue - 1, totalPagesValue)
+      } else {
+        pages.push(totalPagesValue - 3, totalPagesValue - 2, totalPagesValue - 1, totalPagesValue)
+      }
+    }
+    // Nếu currentPage ở giữa
+    else {
+      // Hiển thị: 1, ..., current-1, current, current+1, ..., 10
+      pages.push('ellipsis-start')
+      pages.push(current - 1, current, current + 1)
+      pages.push('ellipsis-end')
+      pages.push(totalPagesValue)
+    }
+    
     return pages
   })
 
