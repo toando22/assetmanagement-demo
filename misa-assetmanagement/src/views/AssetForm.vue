@@ -272,6 +272,9 @@ import MsDialog from '@/components/base/ms-dialog/MsDialog.vue'
 import { DEPARTMENTS, ASSET_TYPES, getDepartmentByCode, getAssetTypeByCode, MOCK_ASSETS } from '@/constants/assetData'
 import { formatNumber, parseNumber, formatDate, parseDate, getYearFromDate } from '@/utils/format'
 import { validateAssetForm } from '@/utils/validate'
+import { getDepartments } from '@/api/departmentApi'
+import { getFixedAssetCategories } from '@/api/fixedAssetCategoryApi'
+import { getNewAssetCode, createFixedAsset, updateFixedAsset } from '@/api/fixedAssetApi'
 
 const props = defineProps({
   modelValue: {
@@ -292,7 +295,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'save', 'cancel'])
+const emit = defineEmits(['update:modelValue', 'save', 'cancel', 'saved'])
 
 // Form data
 const formData = ref({
@@ -325,19 +328,222 @@ const showCancelConfirmDialog = ref(false)
 const showUnsavedDialog = ref(false)
 const errorMessage = ref('')
 
-// Dropdown options từ constants
+// State: Danh sách departments từ API
+const departments = ref([])
+
+// Map để lookup department theo code (dùng cho auto-fill)
+const departmentMap = ref(new Map())
+
+/*
+  Mô tả: Load danh sách departments từ API
+  CreatedBy: DDToan - (14/1/2026)
+*/
+const loadDepartments = async () => {
+  try {
+    const response = await getDepartments()
+    
+    // Xử lý response - có thể là array hoặc object có data property
+    let apiDepartments = []
+    if (Array.isArray(response)) {
+      apiDepartments = response
+    } else if (response && Array.isArray(response.data)) {
+      apiDepartments = response.data
+    } else if (response && response.data) {
+      apiDepartments = [response.data]
+    }
+    
+    // Lưu vào state
+    departments.value = apiDepartments
+    
+    // Tạo map để lookup nhanh theo code
+    departmentMap.value.clear()
+    apiDepartments.forEach(dept => {
+      const code = dept.departmentCode || dept.department_code || dept.code
+      const name = dept.departmentName || dept.department_name || dept.name
+      if (code) {
+        departmentMap.value.set(code, { code, name })
+      }
+    })
+  } catch (error) {
+    console.error('Error loading departments:', error)
+    // Fallback về constants nếu API lỗi
+    departments.value = DEPARTMENTS.map(dept => ({
+      departmentCode: dept.code,
+      departmentName: dept.name
+    }))
+    // Tạo map từ constants
+    departmentMap.value.clear()
+    DEPARTMENTS.forEach(dept => {
+      departmentMap.value.set(dept.code, { code: dept.code, name: dept.name })
+    })
+  }
+}
+
+// Dropdown options từ API (thay thế constants)
 const departmentOptions = computed(() => {
-  return DEPARTMENTS.map(dept => ({
-    value: dept.code,
-    label: dept.code
-  }))
+  if (departments.value.length > 0) {
+    // Dùng data từ API
+    return departments.value.map(dept => ({
+      value: dept.departmentCode || dept.department_code || dept.code,
+      label: dept.departmentCode || dept.department_code || dept.code
+    }))
+  } else {
+    // Fallback về constants nếu chưa load được
+    return DEPARTMENTS.map(dept => ({
+      value: dept.code,
+      label: dept.code
+    }))
+  }
 })
 
+// State: Danh sách fixed asset categories từ API
+const assetCategories = ref([])
+
+// Map để lookup category theo code (dùng cho auto-fill)
+const categoryMap = ref(new Map())
+
+/*
+  Mô tả: Load danh sách fixed asset categories từ API
+  CreatedBy: DDToan - (14/1/2026)
+*/
+const loadAssetCategories = async () => {
+  try {
+    const response = await getFixedAssetCategories()
+    
+    // Xử lý response - có thể là array hoặc object có data property
+    let apiCategories = []
+    if (Array.isArray(response)) {
+      apiCategories = response
+    } else if (response && Array.isArray(response.data)) {
+      apiCategories = response.data
+    } else if (response && response.data) {
+      apiCategories = [response.data]
+    }
+    
+    // Lưu vào state
+    assetCategories.value = apiCategories
+    
+    // Tạo map để lookup nhanh theo code
+    categoryMap.value.clear()
+    apiCategories.forEach(cat => {
+      // Debug: Log toàn bộ object để xem field names thực tế (chỉ khi cần debug)
+      // console.log('Raw category object:', cat)
+      // console.log('All category keys:', Object.keys(cat))
+      
+      const code = cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code
+      const name = cat.fixedAssetCategoryName || cat.fixed_asset_category_name || cat.name
+      
+      // Backend entity dùng FixedAssetCategoryLifeTime (không phải LifeYears)
+      // Thử nhiều format: PascalCase, snake_case, và camelCase
+      // Parse về number để đảm bảo type đúng
+      let lifeYearsRaw = cat.fixedAssetCategoryLifeTime || 
+                        cat.fixed_asset_category_life_time || 
+                        cat.fixedAssetCategoryLifeYears || 
+                        cat.fixed_asset_category_life_years || 
+                        cat.lifeYears || 
+                        cat.lifeTime ||
+                        0
+      
+      // Nếu không tìm thấy, thử tìm trong tất cả các keys có chứa "life", "year", "time"
+      if (!lifeYearsRaw || lifeYearsRaw === 0) {
+        const lifeYearKeys = Object.keys(cat).filter(key => 
+          key.toLowerCase().includes('life') || 
+          key.toLowerCase().includes('year') ||
+          (key.toLowerCase().includes('time') && !key.toLowerCase().includes('created') && !key.toLowerCase().includes('modified'))
+        )
+        if (lifeYearKeys.length > 0) {
+          // Thử lấy giá trị từ field đầu tiên
+          const firstKey = lifeYearKeys[0]
+          const value = cat[firstKey]
+          if (value !== undefined && value !== null) {
+            // console.log(`  → Tìm thấy field "${firstKey}" với giá trị:`, value)
+            lifeYearsRaw = value
+          }
+        }
+      }
+      
+      let lifeYears = typeof lifeYearsRaw === 'string' ? parseInt(lifeYearsRaw, 10) || 0 : (lifeYearsRaw || 0)
+      
+      // Parse về number để đảm bảo type đúng
+      const depreciationRateRaw = cat.fixedAssetCategoryDepreciationRate || 
+                                  cat.fixed_asset_category_depreciation_rate || 
+                                  cat.depreciationRate || 
+                                  0
+      let depreciationRate = typeof depreciationRateRaw === 'string' ? parseFloat(depreciationRateRaw) || 0 : (depreciationRateRaw || 0)
+      
+      // Nếu lifeYears = 0 (dữ liệu trong DB chưa có), fallback về constants
+      if (lifeYears === 0 && code) {
+        const assetTypeFromConstants = getAssetTypeByCode(code)
+        if (assetTypeFromConstants && assetTypeFromConstants.lifeYears) {
+          console.log(`  → Fallback về constants cho category [${code}]: lifeYears = ${assetTypeFromConstants.lifeYears}`)
+          lifeYears = assetTypeFromConstants.lifeYears
+        }
+      }
+      
+      // Nếu depreciationRate = 0 (dữ liệu trong DB chưa có), fallback về constants
+      if (depreciationRate === 0 && code) {
+        const assetTypeFromConstants = getAssetTypeByCode(code)
+        if (assetTypeFromConstants && assetTypeFromConstants.depreciationRate) {
+          console.log(`  → Fallback về constants cho category [${code}]: depreciationRate = ${assetTypeFromConstants.depreciationRate}`)
+          depreciationRate = assetTypeFromConstants.depreciationRate
+        }
+      }
+      
+      // Debug: Log chi tiết để kiểm tra (chỉ log khi có vấn đề)
+      if (code && (!lifeYears || lifeYears === 0)) {
+        console.warn(`Category [${code}] có lifeYears = 0, đã fallback về constants`)
+      }
+      
+      if (code) {
+        categoryMap.value.set(code, { 
+          code, 
+          name, 
+          lifeYears, 
+          depreciationRate 
+        })
+      }
+    })
+    
+    // Debug: Log để kiểm tra (chỉ log khi cần debug)
+    // console.log('Loaded categories from API:', apiCategories)
+    // console.log('Category map:', Array.from(categoryMap.value.entries()))
+  } catch (error) {
+    console.error('Error loading asset categories:', error)
+    // Fallback về constants nếu API lỗi
+    assetCategories.value = ASSET_TYPES.map(type => ({
+      fixedAssetCategoryCode: type.code,
+      fixedAssetCategoryName: type.name,
+      fixedAssetCategoryLifeYears: type.lifeYears,
+      fixedAssetCategoryDepreciationRate: type.depreciationRate
+    }))
+    // Tạo map từ constants
+    categoryMap.value.clear()
+    ASSET_TYPES.forEach(type => {
+      categoryMap.value.set(type.code, { 
+        code: type.code, 
+        name: type.name, 
+        lifeYears: type.lifeYears, 
+        depreciationRate: type.depreciationRate 
+      })
+    })
+  }
+}
+
+// Dropdown options từ API (thay thế constants)
 const assetTypeOptions = computed(() => {
-  return ASSET_TYPES.map(type => ({
-    value: type.code,
-    label: type.code
-  }))
+  if (assetCategories.value.length > 0) {
+    // Dùng data từ API
+    return assetCategories.value.map(cat => ({
+      value: cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code,
+      label: cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code
+    }))
+  } else {
+    // Fallback về constants nếu chưa load được
+    return ASSET_TYPES.map(type => ({
+      value: type.code,
+      label: type.code
+    }))
+  }
 })
 
 // Check unsaved changes
@@ -347,49 +553,73 @@ const hasUnsavedChanges = computed(() => {
 })
 
 /*
-  Mô tả: Tạo mã tài sản tự động với format TS + số 5 chữ số
+  Mô tả: Lấy mã tài sản mới tự động từ API
   Format: TS00001, TS00002, TS00003, ...
   
   CreatedBy: DDToan - (11/1/2026)
+  EditBy: DDToan - (14/1/2026) - Sử dụng API thay vì tự generate
 */
-const generateAssetCode = () => {
-  const prefix = 'TS'
-  const existingAssets = props.existingAssets.length > 0 
-    ? props.existingAssets 
-    : MOCK_ASSETS.map(asset => ({ code: asset.code }))
-  
-  // Tìm tất cả mã có prefix "TS" và extract số
-  const codesWithTS = existingAssets
-    .map(asset => asset.code || asset.assetCode || '')
-    .filter(code => code && code.toString().toUpperCase().startsWith(prefix))
-    .map(code => {
-      const codeStr = code.toString().toUpperCase()
-      if (codeStr.startsWith(prefix)) {
-        const numberPart = codeStr.substring(prefix.length)
-        const num = parseInt(numberPart, 10)
-        return isNaN(num) ? 0 : num
-      }
-      return 0
-    })
-    .filter(num => num > 0)
-  
-  // Tìm số lớn nhất
-  const maxNumber = codesWithTS.length > 0 ? Math.max(...codesWithTS) : 0
-  
-  // Tăng lên 1 và format với 5 chữ số
-  const nextNumber = maxNumber + 1
-  const formattedNumber = String(nextNumber).padStart(5, '0')
-  
-  return `${prefix}${formattedNumber}`
+const generateAssetCode = async () => {
+  try {
+    // Gọi API lấy mã tài sản mới
+    const newCode = await getNewAssetCode()
+    
+    // Debug: Log để kiểm tra response
+    console.log('API getNewAssetCode response:', newCode)
+    
+    // Response có thể là string hoặc object có property
+    if (typeof newCode === 'string') {
+      return newCode
+    } else if (newCode && typeof newCode === 'object' && newCode.code) {
+      return newCode.code
+    } else if (newCode && typeof newCode === 'object' && newCode.data) {
+      return typeof newCode.data === 'string' ? newCode.data : newCode.data.code
+    }
+    
+    // Fallback nếu format không đúng
+    console.warn('Unexpected response format from getNewAssetCode:', newCode)
+    return 'TS00001'
+  } catch (error) {
+    console.error('Error getting new asset code:', error)
+    // Fallback về logic cũ nếu API lỗi (chỉ khi API thực sự lỗi)
+    const prefix = 'TS'
+    const existingAssets = props.existingAssets.length > 0 
+      ? props.existingAssets 
+      : MOCK_ASSETS.map(asset => ({ code: asset.code }))
+    
+    const codesWithTS = existingAssets
+      .map(asset => asset.code || asset.assetCode || '')
+      .filter(code => code && code.toString().toUpperCase().startsWith(prefix))
+      .map(code => {
+        const codeStr = code.toString().toUpperCase()
+        if (codeStr.startsWith(prefix)) {
+          const numberPart = codeStr.substring(prefix.length)
+          const num = parseInt(numberPart, 10)
+          return isNaN(num) ? 0 : num
+        }
+        return 0
+      })
+      .filter(num => num > 0)
+    
+    const maxNumber = codesWithTS.length > 0 ? Math.max(...codesWithTS) : 0
+    const nextNumber = maxNumber + 1
+    const formattedNumber = String(nextNumber).padStart(5, '0')
+    
+    return `${prefix}${formattedNumber}`
+  }
 }
 
-// Reset form về giá trị mặc định
-const resetForm = () => {
+/*
+  Mô tả: Reset form về giá trị mặc định
+  CreatedBy: DDToan - (11/1/2026)
+  EditBy: DDToan - (14/1/2026) - Sử dụng API để lấy mã tài sản mới
+*/
+const resetForm = async () => {
   const today = new Date()
   const currentYear = today.getFullYear()
   
-  // Tự động sinh mã tài sản khi thêm mới
-  const autoGeneratedCode = generateAssetCode()
+  // Tự động sinh mã tài sản khi thêm mới từ API
+  const autoGeneratedCode = await generateAssetCode()
   
   formData.value = {
     assetCode: autoGeneratedCode,
@@ -425,28 +655,60 @@ const calculateAnnualDepreciation = () => {
   }
 }
 
-// Auto-fill khi chọn Mã bộ phận
+/*
+  Mô tả: Auto-fill khi chọn Mã bộ phận
+  CreatedBy: DDToan - (11/1/2026)
+  EditBy: DDToan - (14/1/2026) - Sử dụng data từ API thay vì constants
+*/
 const handleDepartmentChange = (option) => {
   if (option && option.value) {
-    const dept = getDepartmentByCode(option.value)
-    if (dept) {
-      formData.value.departmentName = dept.name
+    // Tìm department từ map (ưu tiên) hoặc constants (fallback)
+    const deptFromMap = departmentMap.value.get(option.value)
+    if (deptFromMap) {
+      formData.value.departmentName = deptFromMap.name
+    } else {
+      // Fallback về constants nếu không tìm thấy trong map
+      const dept = getDepartmentByCode(option.value)
+      if (dept) {
+        formData.value.departmentName = dept.name
+      }
     }
   } else {
     formData.value.departmentName = ''
   }
 }
 
-// Auto-fill khi chọn Mã loại tài sản
+/*
+  Mô tả: Auto-fill khi chọn Mã loại tài sản
+  CreatedBy: DDToan - (11/1/2026)
+  EditBy: DDToan - (14/1/2026) - Sử dụng data từ API thay vì constants
+*/
 const handleAssetTypeChange = (option) => {
   if (option && option.value) {
-    const assetType = getAssetTypeByCode(option.value)
-    if (assetType) {
-      formData.value.assetTypeName = assetType.name
-      formData.value.yearsOfUse = assetType.lifeYears
-      formData.value.depreciationRate = assetType.depreciationRate.toString()
+    // Tìm category từ map (ưu tiên) hoặc constants (fallback)
+    const categoryFromMap = categoryMap.value.get(option.value)
+    
+    if (categoryFromMap) {
+      formData.value.assetTypeName = categoryFromMap.name
+      // Đảm bảo lifeYears là number và > 0
+      const lifeYearsValue = categoryFromMap.lifeYears || 0
+      formData.value.yearsOfUse = lifeYearsValue
+      formData.value.depreciationRate = categoryFromMap.depreciationRate ? categoryFromMap.depreciationRate.toString() : ''
       // Trigger tính toán lại Hao mòn năm
       calculateAnnualDepreciation()
+    } else {
+      console.warn('Category not found in map, trying constants fallback')
+      // Fallback về constants nếu không tìm thấy trong map
+      const assetType = getAssetTypeByCode(option.value)
+      if (assetType) {
+        formData.value.assetTypeName = assetType.name
+        formData.value.yearsOfUse = assetType.lifeYears
+        formData.value.depreciationRate = assetType.depreciationRate.toString()
+        // Trigger tính toán lại Hao mòn năm
+        calculateAnnualDepreciation()
+      } else {
+        console.error('Category not found in both map and constants:', option.value)
+      }
     }
   } else {
     formData.value.assetTypeName = ''
@@ -494,8 +756,12 @@ watch(
 // Watch modal open/close
 watch(
   () => props.modelValue,
-  (isOpen) => {
+  async (isOpen) => {
     if (isOpen) {
+      // Load departments và categories từ API khi mở form (await để đảm bảo data đã load xong)
+      await loadDepartments()
+      await loadAssetCategories()
+      
       // Mở form
       if (props.assetData) {
         // Edit mode: load data từ assetData
@@ -516,16 +782,16 @@ watch(
           annualDepreciationValue: props.assetData.annualDepreciationValue || 0
         }
       } else {
-        // Add mode: reset form
-        resetForm()
+        // Add mode: reset form (sẽ gọi API lấy mã mới)
+        await resetForm()
       }
       
       // Lưu snapshot ban đầu
       initialFormData.value = JSON.parse(JSON.stringify(formData.value))
       fieldErrors.value = {}
     } else {
-      // Đóng form: reset
-      resetForm()
+      // Đóng form: không cần reset (sẽ reset khi mở lại)
+      // await resetForm() // Comment lại để không reset khi đóng
     }
   }
 )
@@ -590,8 +856,67 @@ const validateForm = () => {
   return result
 }
 
-// Xử lý Save
-const handleSave = () => {
+/*
+  Mô tả: Map dữ liệu từ form format sang API format (backend)
+  CreatedBy: DDToan - (14/1/2026)
+*/
+const mapFormDataToApiFormat = (formData) => {
+  // Format date từ dd/mm/yyyy sang yyyy-MM-dd
+  const formatDateForApi = (dateString) => {
+    if (!dateString) return null
+    try {
+      // Parse từ dd/mm/yyyy
+      const parts = dateString.split('/')
+      if (parts.length === 3) {
+        const day = parts[0]
+        const month = parts[1]
+        const year = parts[2]
+        return `${year}-${month}-${day}`
+      }
+      return dateString
+    } catch {
+      return dateString
+    }
+  }
+  
+  // Tìm departmentId từ departmentCode
+  const department = departments.value.find(
+    dept => (dept.departmentCode || dept.department_code || dept.code) === formData.departmentCode
+  )
+  const departmentId = department 
+    ? (department.departmentId || department.department_id || department.id) 
+    : null
+  
+  // Tìm fixedAssetCategoryId từ assetTypeCode
+  const category = assetCategories.value.find(
+    cat => (cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code) === formData.assetTypeCode
+  )
+  const fixedAssetCategoryId = category 
+    ? (category.fixedAssetCategoryId || category.fixed_asset_category_id || category.id) 
+    : null
+  
+  return {
+    fixedAssetCode: formData.assetCode,
+    fixedAssetName: formData.assetName,
+    departmentId: departmentId,
+    fixedAssetCategoryId: fixedAssetCategoryId,
+    fixedAssetQuantity: formData.quantity || 1,
+    fixedAssetOriginalCost: parseNumber(formData.originalCost) || 0,
+    fixedAssetDepreciationRate: parseFloat(formData.depreciationRate) || 0,
+    fixedAssetPurchaseDate: formatDateForApi(formData.purchaseDate),
+    fixedAssetStartUseDate: formatDateForApi(formData.startUseDate),
+    fixedAssetTrackingYear: parseInt(formData.trackingYear) || new Date().getFullYear(),
+    fixedAssetLifeTime: formData.yearsOfUse || 0,
+    fixedAssetAnnualDepreciationValue: parseNumber(formData.annualDepreciationValue) || 0
+  }
+}
+
+/*
+  Mô tả: Xử lý Save - Gọi API Create hoặc Update
+  CreatedBy: DDToan - (11/1/2026)
+  EditBy: DDToan - (14/1/2026) - Tích hợp API Create/Update
+*/
+const handleSave = async () => {
   // Clear errors
   fieldErrors.value = {}
   
@@ -606,17 +931,55 @@ const handleSave = () => {
     return
   }
   
-  // Hợp lệ → Save
-  emit('save', { ...formData.value })
-  
-  // Hiển thị success dialog
-  showSuccessDialog.value = true
-  
-  // Tự đóng form sau 1.5s
-  setTimeout(() => {
-    showSuccessDialog.value = false
-    emit('update:modelValue', false)
-  }, 1500)
+  try {
+    // Map dữ liệu từ form format sang API format
+    const apiData = mapFormDataToApiFormat(formData.value)
+    
+    // Debug: Log data trước khi gửi lên server
+    console.log('API Data to send:', apiData)
+    console.log('API Data (JSON):', JSON.stringify(apiData, null, 2))
+    
+    // Gọi API Create hoặc Update
+    if (props.assetData && props.assetData.id) {
+      // Update mode
+      const assetId = props.assetData.id
+      await updateFixedAsset(assetId, apiData)
+    } else {
+      // Create mode
+      await createFixedAsset(apiData)
+    }
+    
+    // Thành công → Emit event để parent reload danh sách
+    emit('saved')
+    
+    // Hiển thị success dialog
+    showSuccessDialog.value = true
+    
+    // Tự đóng form sau 1.5s
+    setTimeout(() => {
+      showSuccessDialog.value = false
+      emit('update:modelValue', false)
+    }, 1500)
+  } catch (error) {
+    console.error('Error saving asset:', error)
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response,
+      data: error.data,
+      fullError: error
+    })
+    // Hiển thị error message chi tiết hơn
+    let errorMsg = 'Có lỗi xảy ra khi lưu dữ liệu. Vui lòng thử lại sau.'
+    if (error.message) {
+      errorMsg = error.message
+    } else if (error.data && error.data.message) {
+      errorMsg = error.data.message
+    } else if (error.response && error.response.message) {
+      errorMsg = error.response.message
+    }
+    errorMessage.value = errorMsg
+    showErrorDialog.value = true
+  }
 }
 
 // Xử lý Cancel

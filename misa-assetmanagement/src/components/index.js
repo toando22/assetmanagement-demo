@@ -13,6 +13,7 @@ export { default as MsSearch } from './base/ms-search/MsSearch.vue'
 export { default as MsDropdown } from './base/ms-dropdown/MsDropdown.vue'
 export { default as MsDropdownField } from './base/ms-dropdown-field/MsDropdownField.vue'
 export { default as MsPopup } from './base/ms-popup/MsPopup.vue'
+export { default as MsContextMenu } from './base/ms-context-menu/MsContextMenu.vue'
 
 // Feature Components
 // AssetForm đã được di chuyển sang src/views/AssetForm.vue

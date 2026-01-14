@@ -84,14 +84,25 @@
           class="btn btn--outline btn--danger"
           title="Xóa"
           :disabled="selectedAssets.length === 0"
+          @click="handleDeleteClick"
         >
           <i class="icon icon-delete"></i>
         </button>
       </div>
     </div>
 
+    <!-- Loading Indicator -->
+    <div v-if="loading" class="asset-list__loading">
+      <div class="loading-spinner">Đang tải dữ liệu...</div>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="errorMessage && !loading" class="asset-list__error">
+      <div class="error-message">{{ errorMessage }}</div>
+    </div>
+
     <!-- Table Container -->
-    <div class="asset-list__container">
+    <div class="asset-list__container" v-if="!loading">
       <!-- Table -->
       <div class="asset-list__table-wrapper">
         <table class="asset-table">
@@ -104,14 +115,14 @@
                 </label>
               </th>
               <th class="asset-table__th asset-table__th--stt">STT</th>
-              <th class="asset-table__th">Mã tài sản</th>
-              <th class="asset-table__th">Tên tài sản</th>
-              <th class="asset-table__th">Loại tài sản</th>
-              <th class="asset-table__th">Bộ phận sử dụng</th>
-              <th class="asset-table__th asset-table__th--number">Số lượng</th>
-              <th class="asset-table__th asset-table__th--number">Nguyên giá</th>
-              <th class="asset-table__th asset-table__th--number">HM/KH lũy kế</th>
-              <th class="asset-table__th asset-table__th--number">Giá trị còn lại</th>
+              <th class="asset-table__th asset-table__th--code">Mã tài sản</th>
+              <th class="asset-table__th asset-table__th--name">Tên tài sản</th>
+              <th class="asset-table__th asset-table__th--type">Loại tài sản</th>
+              <th class="asset-table__th asset-table__th--department">Bộ phận sử dụng</th>
+              <th class="asset-table__th asset-table__th--number asset-table__th--quantity">Số lượng</th>
+              <th class="asset-table__th asset-table__th--number asset-table__th--cost">Nguyên giá</th>
+              <th class="asset-table__th asset-table__th--number asset-table__th--depreciation">HM/KH lũy kế</th>
+              <th class="asset-table__th asset-table__th--number asset-table__th--remaining">Giá trị còn lại</th>
               <th class="asset-table__th asset-table__th--actions">Chức năng</th>
             </tr>
           </thead>
@@ -120,7 +131,12 @@
               v-for="(asset, index) in paginatedAssets"
               :key="asset.id"
               class="asset-table__row"
-              :class="{ 'asset-table__row--selected': selectedAssets.includes(asset.id) }"
+              :class="{
+                'asset-table__row--selected': selectedAssets.includes(asset.id),
+                'asset-table__row--focused': focusedRowIndex === index
+              }"
+              :data-row-index="index"
+              @contextmenu.prevent="handleContextMenu($event, asset, index)"
             >
               <td class="asset-table__td asset-table__td--checkbox">
                 <label class="asset-table__checkbox-wrapper">
@@ -131,18 +147,18 @@
               <td class="asset-table__td asset-table__td--stt">
                 {{ (currentPage - 1) * pageSize + index + 1 }}
               </td>
-              <td class="asset-table__td">{{ asset.code }}</td>
-              <td class="asset-table__td">{{ asset.name }}</td>
-              <td class="asset-table__td">{{ asset.type }}</td>
-              <td class="asset-table__td">{{ asset.department }}</td>
-              <td class="asset-table__td asset-table__td--number">{{ asset.quantity }}</td>
-              <td class="asset-table__td asset-table__td--number">
+              <td class="asset-table__td asset-table__td--code" :title="asset.code">{{ asset.code }}</td>
+              <td class="asset-table__td asset-table__td--name" :title="asset.name">{{ asset.name }}</td>
+              <td class="asset-table__td asset-table__td--type" :title="asset.type">{{ asset.type }}</td>
+              <td class="asset-table__td asset-table__td--department" :title="asset.department">{{ asset.department }}</td>
+              <td class="asset-table__td asset-table__td--number asset-table__td--quantity">{{ asset.quantity }}</td>
+              <td class="asset-table__td asset-table__td--number asset-table__td--cost">
                 {{ formatNumber(asset.cost) }}
               </td>
-              <td class="asset-table__td asset-table__td--number">
+              <td class="asset-table__td asset-table__td--number asset-table__td--depreciation">
                 {{ formatNumber(asset.depreciation) }}
               </td>
-              <td class="asset-table__td asset-table__td--number">
+              <td class="asset-table__td asset-table__td--number asset-table__td--remaining">
                 {{ formatNumber(asset.remainingValue) }}
               </td>
               <td class="asset-table__td asset-table__td--actions">
@@ -241,9 +257,30 @@
         :asset-data="selectedAssetData"
         :existing-assets="assets"
         @save="handleSaveAsset"
+        @saved="handleAssetSaved"
         @cancel="handleCancelForm"
       />
     </div>
+
+    <!-- Delete Confirmation Dialog -->
+    <MsDialog
+      v-model="showDeleteDialog"
+      type="confirm"
+      :message="deleteDialogMessage"
+      :buttons="deleteDialogButtons"
+      @confirm="handleConfirmDelete"
+      @cancel="handleCancelDelete"
+    />
+
+    <!-- Context Menu -->
+    <MsContextMenu
+      v-model="showContextMenu"
+      :items="contextMenuItems"
+      :x="contextMenuX"
+      :y="contextMenuY"
+      @select="handleContextMenuSelect"
+      @close="showContextMenu = false"
+    />
   </div>
 </template>
 
@@ -265,7 +302,13 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { MOCK_ASSETS } from '@/constants/assetData'
 import AssetForm from './AssetForm.vue'
 import MsDropdown from '@/components/base/ms-dropdown/MsDropdown.vue'
+import MsDialog from '@/components/base/ms-dialog/MsDialog.vue'
+import MsContextMenu from '@/components/base/ms-context-menu/MsContextMenu.vue'
 import { usePagination } from '@/composables/usePagination'
+import { useKeyboardNavigation } from '@/composables/useKeyboardNavigation'
+import { getFixedAssets } from '@/api/fixedAssetApi'
+import { getDepartments } from '@/api/departmentApi'
+import { getFixedAssetCategories } from '@/api/fixedAssetCategoryApi'
 
 // State
 const searchText = ref('')
@@ -276,20 +319,31 @@ const selectAll = ref(false)
 const isFormOpen = ref(false)
 const selectedAssetData = ref(null)
 const formTitle = ref('Thêm tài sản')
+const showDeleteDialog = ref(false)
+const assetToDelete = ref(null)
+const showContextMenu = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const contextMenuAsset = ref(null)
 
-// Mock data
-const assets = ref(MOCK_ASSETS)
+// State
+const loading = ref(false)
+const errorMessage = ref('')
+
+// Data
+const assets = ref([])
+
+// State: Danh sách departments và categories từ API
+const departments = ref([])
+const assetCategories = ref([])
 
 // Dropdown options
-const departmentOptions = ref([
-  { value: 'ke-toan', label: 'Phòng Hành chính Kế toán' },
-  { value: 'thu-ky', label: 'Phòng Thư ký' },
-])
+const departmentOptions = ref([])
+const assetTypeOptions = ref([])
 
-const assetTypeOptions = ref([
-  { value: 'may-tinh', label: 'Máy tính' },
-  { value: 'thiet-bi', label: 'Thiết bị' },
-])
+// Maps để lookup nhanh
+const departmentMap = ref(new Map()) // Map<departmentId, {code, name}>
+const categoryMap = ref(new Map()) // Map<categoryId, {code, name}>
 
 // Refs
 const assetTypeDropdownRef = ref(null)
@@ -345,18 +399,126 @@ watch(
   { deep: true },
 )
 
-onMounted(() => {
-  setDropdownWidths()
-})
+/**
+ * Format date từ backend (yyyy-MM-dd hoặc ISO string) sang dd/mm/yyyy
+ */
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return dateString
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  } catch {
+    return dateString
+  }
+}
 
-// Computed: Tổng số bản ghi
+/**
+ * Map dữ liệu từ API format sang frontend format
+ * @param {object} apiAsset - Dữ liệu từ API
+ * @returns {object} - Dữ liệu format cho frontend
+ */
+const mapAssetFromApi = (apiAsset) => {
+  // Lấy department info từ map
+  const departmentId = apiAsset.departmentId || apiAsset.department_id
+  const departmentInfo = departmentId ? departmentMap.value.get(departmentId) : null
+  
+  // Lấy category info từ map
+  const categoryId = apiAsset.fixedAssetCategoryId || apiAsset.fixed_asset_category_id
+  const categoryInfo = categoryId ? categoryMap.value.get(categoryId) : null
+
+  return {
+    id: apiAsset.fixedAssetId || apiAsset.fixed_asset_id || apiAsset.id,
+    code: apiAsset.fixedAssetCode || apiAsset.fixed_asset_code || apiAsset.code,
+    name: apiAsset.fixedAssetName || apiAsset.fixed_asset_name || apiAsset.name,
+    type: categoryInfo?.name || apiAsset.fixedAssetCategoryName || apiAsset.fixed_asset_category_name || apiAsset.type || '',
+    department: departmentInfo?.name || apiAsset.departmentName || apiAsset.department_name || apiAsset.department || '',
+    quantity: apiAsset.fixedAssetQuantity || apiAsset.fixed_asset_quantity || apiAsset.quantity || 1,
+    cost: apiAsset.fixedAssetOriginalCost || apiAsset.fixed_asset_original_cost || apiAsset.cost || 0,
+    depreciation: apiAsset.fixedAssetAnnualDepreciationValue || apiAsset.fixed_asset_annual_depreciation_value || apiAsset.depreciation || 0,
+    remainingValue: (apiAsset.fixedAssetOriginalCost || apiAsset.fixed_asset_original_cost || apiAsset.cost || 0) - 
+                   (apiAsset.fixedAssetAnnualDepreciationValue || apiAsset.fixed_asset_annual_depreciation_value || apiAsset.depreciation || 0),
+    // Thêm các field cần thiết cho form
+    departmentCode: departmentInfo?.code || apiAsset.departmentCode || apiAsset.department_code || '',
+    departmentName: departmentInfo?.name || apiAsset.departmentName || apiAsset.department_name || '',
+    departmentId: departmentId,
+    assetTypeCode: categoryInfo?.code || apiAsset.fixedAssetCategoryCode || apiAsset.fixed_asset_category_code || apiAsset.assetTypeCode || '',
+    assetTypeName: categoryInfo?.name || apiAsset.fixedAssetCategoryName || apiAsset.fixed_asset_category_name || apiAsset.assetTypeName || '',
+    fixedAssetCategoryId: categoryId,
+    originalCost: apiAsset.fixedAssetOriginalCost || apiAsset.fixed_asset_original_cost || apiAsset.cost || 0,
+    depreciationRate: apiAsset.fixedAssetDepreciationRate || apiAsset.fixed_asset_depreciation_rate || apiAsset.depreciationRate || 0,
+    purchaseDate: formatDate(apiAsset.fixedAssetPurchaseDate || apiAsset.fixed_asset_purchase_date || apiAsset.purchaseDate),
+    startUseDate: formatDate(apiAsset.fixedAssetStartUseDate || apiAsset.fixed_asset_start_use_date || apiAsset.startUseDate),
+    trackingYear: apiAsset.fixedAssetTrackingYear || apiAsset.fixed_asset_tracking_year || apiAsset.trackingYear || '',
+    yearsOfUse: apiAsset.fixedAssetLifeTime || apiAsset.fixed_asset_life_time || apiAsset.yearsOfUse || 0,
+    annualDepreciationValue: apiAsset.fixedAssetAnnualDepreciationValue || apiAsset.fixed_asset_annual_depreciation_value || apiAsset.annualDepreciationValue || 0
+  }
+}
+
+/**
+ * Load danh sách Departments và Categories để map vào assets
+ */
+const loadMasterData = async () => {
+  try {
+    // Load Departments
+    const departmentsResponse = await getDepartments()
+    const departmentsData = Array.isArray(departmentsResponse) ? departmentsResponse : (departmentsResponse.data || [])
+    
+    // Lưu vào state
+    departments.value = departmentsData
+    
+    // Tạo map và dropdown options cho Departments
+    departmentMap.value.clear()
+    departmentOptions.value = []
+    departmentsData.forEach(dept => {
+      const id = dept.departmentId || dept.department_id || dept.id
+      const code = dept.departmentCode || dept.department_code || dept.code
+      const name = dept.departmentName || dept.department_name || dept.name
+      
+      if (id) {
+        departmentMap.value.set(id, { code, name })
+        departmentOptions.value.push({ value: id, label: name })
+      }
+    })
+    
+    // Load Categories
+    const categoriesResponse = await getFixedAssetCategories()
+    const categoriesData = Array.isArray(categoriesResponse) ? categoriesResponse : (categoriesResponse.data || [])
+    
+    // Lưu vào state
+    assetCategories.value = categoriesData
+    
+    // Tạo map và dropdown options cho Categories
+    categoryMap.value.clear()
+    assetTypeOptions.value = []
+    categoriesData.forEach(cat => {
+      const id = cat.fixedAssetCategoryId || cat.fixed_asset_category_id || cat.id
+      const code = cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code
+      const name = cat.fixedAssetCategoryName || cat.fixed_asset_category_name || cat.name
+      
+      if (id) {
+        categoryMap.value.set(id, { code, name })
+        assetTypeOptions.value.push({ value: id, label: name })
+      }
+    })
+  } catch (error) {
+    console.error('Error loading master data:', error)
+    // Không throw error, chỉ log để không block việc load assets
+  }
+}
+
+// State: Tổng số bản ghi từ backend (dùng cho pagination)
+const totalRecordsFromBackend = ref(0)
+
+// Computed: Tổng số bản ghi (ưu tiên từ backend, fallback về length của assets)
 const totalRecords = computed(() => {
-  const count = assets.value.length
-  console.log('Total Records:', count)
-  return count
+  return totalRecordsFromBackend.value || assets.value.length
 })
 
-// Sử dụng composable usePagination
+// Sử dụng composable usePagination (phải khởi tạo trước loadAssets)
 const {
   currentPage,
   pageSize,
@@ -374,78 +536,125 @@ const {
   maxVisiblePages: 5,
 })
 
+/**
+ * Load danh sách tài sản từ API với pagination
+ * @param {number} page - Số trang (mặc định: currentPage.value)
+ * @param {number} size - Số bản ghi mỗi trang (mặc định: pageSize.value)
+ */
+const loadAssets = async (page = null, size = null) => {
+  try {
+    loading.value = true
+    errorMessage.value = ''
+    
+    // Load master data trước (Departments và Categories) - chỉ load 1 lần
+    if (departments.value.length === 0 || assetCategories.value.length === 0) {
+      await loadMasterData()
+    }
+    
+    // Lấy page và pageSize từ params hoặc từ state hiện tại
+    const currentPageNum = page !== null ? page : currentPage.value
+    const currentPageSize = size !== null ? size : pageSize.value
+    
+    // Gọi API lấy danh sách tài sản với pagination params
+    const response = await getFixedAssets({
+      page: currentPageNum,
+      pageSize: currentPageSize
+    })
+    
+    // Xử lý response - có thể là array hoặc object có data property
+    let apiAssets = []
+    let total = 0
+    
+    if (Array.isArray(response)) {
+      // Response là array trực tiếp (fallback - không có pagination info)
+      apiAssets = response
+      total = response.length
+    } else if (response && Array.isArray(response.data)) {
+      // Response có format: { data: [...], total: 100, page: 1, pageSize: 20 }
+      apiAssets = response.data
+      total = response.total || response.totalCount || response.totalRecords || 0
+    } else if (response && response.data) {
+      // Response có data nhưng không phải array
+      apiAssets = [response.data]
+      total = 1
+    }
+    
+    // Map từ API format sang frontend format (sẽ dùng departmentMap và categoryMap)
+    assets.value = apiAssets.map(mapAssetFromApi)
+    
+    // Cập nhật totalRecordsFromBackend từ backend
+    totalRecordsFromBackend.value = total
+    
+    // Nếu không có dữ liệu, fallback về mock data (để test UI)
+    if (assets.value.length === 0 && total === 0) {
+      console.warn('No data from API, using mock data for testing')
+      assets.value = MOCK_ASSETS.map(mapAssetFromApi)
+      totalRecordsFromBackend.value = MOCK_ASSETS.length
+    }
+  } catch (error) {
+    console.error('Error loading assets:', error)
+    errorMessage.value = error.message || 'Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.'
+    
+    // Fallback về mock data nếu có lỗi (để test UI)
+    console.warn('Using mock data due to error')
+    assets.value = MOCK_ASSETS.map(mapAssetFromApi)
+    totalRecordsFromBackend.value = MOCK_ASSETS.length
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadAssets() // Load data từ API
+  setDropdownWidths()
+})
+
+// Watch: Khi currentPage thay đổi, gọi lại API với trang mới
+watch(currentPage, (newPage) => {
+  if (newPage > 0) {
+    loadAssets(newPage, pageSize.value)
+  }
+})
+
+// Watch: Khi pageSize thay đổi, gọi lại API với pageSize mới
+// Lưu ý: setPageSize trong composable đã reset về trang 1, nên sẽ gọi với page = 1
+watch(pageSize, (newSize) => {
+  if (newSize > 0) {
+    loadAssets(currentPage.value, newSize)
+  }
+})
+
+
 // Computed: Danh sách tài sản đã phân trang
+// Lưu ý: Backend đã phân trang, không cần slice nữa
 const paginatedAssets = computed(() => {
-  return assets.value.slice(startIndex.value, endIndex.value)
+  // Backend đã trả về đúng số bản ghi của trang hiện tại
+  // Không cần slice nữa, dùng trực tiếp assets.value
+  return assets.value
 })
 
-// Computed: Tính toán lại visiblePages để đảm bảo reactive
-const displayPages = computed(() => {
-  const pages = []
-  const totalPagesValue = totalPages.value
-  const current = currentPage.value
-
-  console.log('DisplayPages - Total:', totalPagesValue, 'Current:', current)
-
-  if (totalPagesValue <= 1) {
-    return [1]
-  }
-
-  // Nếu chỉ có ít trang (<= 5), hiển thị tất cả
-  if (totalPagesValue <= 5) {
-    for (let i = 1; i <= totalPagesValue; i++) {
-      pages.push(i)
-    }
-    return pages
-  }
-
-  // Luôn hiển thị trang đầu
-  pages.push(1)
-
-  // Nếu currentPage gần đầu (trang 1, 2, 3)
-  if (current <= 3) {
-    // Hiển thị: 1, 2, 3, ..., 10
-    if (current === 1) {
-      if (totalPagesValue > 1) {
-        pages.push(2)
-      }
-    } else if (current === 2) {
-      pages.push(2, 3)
+// Keyboard navigation composable (phải đặt sau paginatedAssets)
+const {
+  focusedRowIndex,
+  focusRow,
+  resetFocus,
+} = useKeyboardNavigation({
+  items: paginatedAssets,
+  onSelect: (item, index) => {
+    // Khi nhấn Enter/Space, chọn row đó
+    const itemId = item.id
+    if (selectedAssets.value.includes(itemId)) {
+      const idx = selectedAssets.value.indexOf(itemId)
+      selectedAssets.value.splice(idx, 1)
     } else {
-      pages.push(2, 3, 4)
+      selectedAssets.value.push(itemId)
     }
-    // Thêm ellipsis và trang cuối nếu cần
-    if (totalPagesValue > 4) {
-      pages.push('ellipsis-end')
-    }
-    if (totalPagesValue > 1) {
-      pages.push(totalPagesValue)
-    }
-  }
-  // Nếu currentPage gần cuối
-  else if (current >= totalPagesValue - 2) {
-    // Hiển thị: 1, ..., 8, 9, 10
-    pages.push('ellipsis-start')
-    if (current === totalPagesValue) {
-      pages.push(totalPagesValue - 1, totalPagesValue)
-    } else if (current === totalPagesValue - 1) {
-      pages.push(totalPagesValue - 2, totalPagesValue - 1, totalPagesValue)
-    } else {
-      pages.push(totalPagesValue - 3, totalPagesValue - 2, totalPagesValue - 1, totalPagesValue)
-    }
-  }
-  // Nếu currentPage ở giữa
-  else {
-    // Hiển thị: 1, ..., current-1, current, current+1, ..., 10
-    pages.push('ellipsis-start')
-    pages.push(current - 1, current, current + 1)
-    pages.push('ellipsis-end')
-    pages.push(totalPagesValue)
-  }
-
-  console.log('DisplayPages result:', pages)
-  return pages
+  },
+  getItemId: (item) => item.id,
 })
+
+// Sử dụng visiblePages từ composable (đã được tối ưu và tái sử dụng)
+const displayPages = computed(() => visiblePages.value)
 
 // Computed: Chuyển đổi pageSizeOptions thành format cho dropdown
 const pageSizeDropdownOptions = computed(() => {
@@ -461,10 +670,10 @@ const pageSizeDropdownOptions = computed(() => {
 const selectedTotals = computed(() => {
   const selected = assets.value.filter((asset) => selectedAssets.value.includes(asset.id))
   return {
-    quantity: selected.reduce((sum, asset) => sum + asset.quantity, 0),
-    cost: selected.reduce((sum, asset) => sum + asset.cost, 0),
-    depreciation: selected.reduce((sum, asset) => sum + asset.depreciation, 0),
-    remainingValue: selected.reduce((sum, asset) => sum + asset.remainingValue, 0),
+    quantity: selected.reduce((sum, asset) => sum + (Number(asset.quantity) || 0), 0),
+    cost: selected.reduce((sum, asset) => sum + (Number(asset.cost) || 0), 0),
+    depreciation: selected.reduce((sum, asset) => sum + (Number(asset.depreciation) || 0), 0),
+    remainingValue: selected.reduce((sum, asset) => sum + (Number(asset.remainingValue) || 0), 0),
   }
 })
 
@@ -478,7 +687,11 @@ const toggleSelectAll = () => {
 }
 
 const formatNumber = (num) => {
-  return num.toLocaleString('vi-VN')
+  // Xử lý trường hợp undefined, null hoặc không phải số
+  if (num === null || num === undefined || isNaN(num)) {
+    return '0'
+  }
+  return Number(num).toLocaleString('vi-VN')
 }
 
 const handleAddAsset = () => {
@@ -499,28 +712,136 @@ const handleDuplicate = (asset) => {
   isFormOpen.value = true
 }
 
+/*
+  Mô tả: Xử lý khi form save (legacy - giữ lại để tương thích)
+  CreatedBy: DDToan - (09/1/2026)
+  EditBy: DDToan - (14/1/2026) - Giữ lại để tương thích, logic thực tế đã chuyển sang handleAssetSaved
+*/
 const handleSaveAsset = (assetData) => {
-  console.log('Save asset:', assetData)
-  // TODO: Implement save logic (API call)
-  // For now, just add to mock data
-  if (!assetData.id) {
-    // Add new asset
-    const newAsset = {
-      id: Date.now(),
-      ...assetData,
-    }
-    assets.value.push(newAsset)
-  } else {
-    // Update existing asset
-    const index = assets.value.findIndex((a) => a.id === assetData.id)
-    if (index > -1) {
-      assets.value[index] = { ...assetData }
-    }
-  }
+  // Logic này đã được chuyển sang API call trong AssetForm
+  // Giữ lại để tương thích nếu có component khác gọi
+}
+
+/*
+  Mô tả: Xử lý sau khi save thành công - Reload danh sách từ API
+  CreatedBy: DDToan - (14/1/2026)
+  EditBy: DDToan - (14/1/2026) - Reload với trang hiện tại
+*/
+const handleAssetSaved = async () => {
+  // Reload danh sách tài sản từ API sau khi save thành công (giữ nguyên trang hiện tại)
+  await loadAssets(currentPage.value, pageSize.value)
 }
 
 const handleCancelForm = () => {
   selectedAssetData.value = null
+}
+
+// Computed: Message cho dialog xóa
+const deleteDialogMessage = computed(() => {
+  if (!assetToDelete.value) return ''
+  return `Bạn có muốn xóa tài sản ${assetToDelete.value.code} - ${assetToDelete.value.name} ?`
+})
+
+// Computed: Buttons cho dialog xóa
+const deleteDialogButtons = computed(() => [
+  { label: 'Không', variant: 'outline', action: 'cancel' },
+  { label: 'Xóa', variant: 'primary', action: 'confirm' },
+])
+
+// Handler: Click button xóa
+const handleDeleteClick = () => {
+  if (selectedAssets.value.length === 0) return
+
+  // Lấy tài sản đầu tiên được chọn để hiển thị trong dialog
+  const firstSelectedId = selectedAssets.value[0]
+  const asset = assets.value.find((a) => a.id === firstSelectedId)
+
+  if (asset) {
+    assetToDelete.value = asset
+    showDeleteDialog.value = true
+  }
+}
+
+// Handler: Xác nhận xóa
+const handleConfirmDelete = () => {
+  if (selectedAssets.value.length === 0) return
+
+  // Xóa tất cả các tài sản đã chọn
+  selectedAssets.value.forEach((assetId) => {
+    const index = assets.value.findIndex((a) => a.id === assetId)
+    if (index > -1) {
+      assets.value.splice(index, 1)
+    }
+  })
+
+  // Xóa tất cả khỏi danh sách selected
+  selectedAssets.value = []
+
+  // Reset selectAll
+  selectAll.value = false
+
+  // Điều chỉnh trang nếu cần (nếu trang hiện tại không còn bản ghi)
+  if (paginatedAssets.value.length === 0 && currentPage.value > 1) {
+    goToPage(currentPage.value - 1)
+  }
+
+  // Đóng dialog và reset
+  showDeleteDialog.value = false
+  assetToDelete.value = null
+}
+
+// Handler: Hủy xóa
+const handleCancelDelete = () => {
+  showDeleteDialog.value = false
+  assetToDelete.value = null
+}
+
+// Computed: Context Menu Items
+const contextMenuItems = computed(() => {
+  if (!contextMenuAsset.value) return []
+  
+  return [
+    {
+      label: 'Thêm',
+      icon: 'add',
+      action: () => handleAddAsset()
+    },
+    {
+      label: 'Sửa',
+      icon: 'edit',
+      action: () => handleEdit(contextMenuAsset.value)
+    },
+    {
+      label: 'Nhân bản',
+      icon: 'duplicate',
+      action: () => handleDuplicate(contextMenuAsset.value)
+    },
+    {
+      label: 'Xóa',
+      icon: 'delete',
+      action: () => {
+        if (contextMenuAsset.value) {
+          selectedAssets.value = [contextMenuAsset.value.id]
+          handleDeleteClick()
+        }
+      }
+    }
+  ]
+})
+
+// Handler: Context Menu
+const handleContextMenu = (event, asset, index) => {
+  contextMenuX.value = event.clientX
+  contextMenuY.value = event.clientY
+  contextMenuAsset.value = asset
+  showContextMenu.value = true
+}
+
+// Handler: Context Menu Select
+const handleContextMenuSelect = (item) => {
+  // Action đã được gọi trong item.action
+  showContextMenu.value = false
+  contextMenuAsset.value = null
 }
 </script>
 
@@ -869,6 +1190,7 @@ const handleCancelForm = () => {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: fixed; /* Fix width cố định cho các cột */
 }
 
 .asset-table__head {
@@ -903,13 +1225,63 @@ const handleCancelForm = () => {
   text-align: center;
 }
 
+.asset-table__th--code {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.asset-table__th--name {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+}
+
+.asset-table__th--type {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
+
+.asset-table__th--department {
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+}
+
 .asset-table__th--number {
   text-align: right;
   padding-right: 16px;
 }
 
+.asset-table__th--quantity {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
+.asset-table__th--cost {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.asset-table__th--depreciation {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.asset-table__th--remaining {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
 .asset-table__th--actions {
   width: 96px;
+  min-width: 96px;
+  max-width: 96px;
   text-align: center;
 }
 
@@ -929,20 +1301,33 @@ const handleCancelForm = () => {
   background-color: #e6f7ff;
 }
 
+.asset-table__row--focused {
+  outline: 2px solid #1aa4c8;
+  outline-offset: -2px;
+}
+
+.asset-table__row--focused:not(.asset-table__row--selected) {
+  background-color: #f0fafc;
+}
+
 .asset-table__td {
   padding: 12px;
-  font-size: 14px;
+  font-size: 13px; /* Đổi từ 14px → 13px */
   color: #182026;
   border-bottom: 1px solid #e8e8e8;
   line-height: 18px;
   vertical-align: middle;
   height: 40px;
   box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .asset-table__td--checkbox {
   text-align: center;
   padding: 12px 8px;
+  overflow: visible; /* Checkbox không cần ellipsis */
 }
 
 /* Checkbox wrapper */
@@ -1020,6 +1405,31 @@ const handleCancelForm = () => {
   text-align: center;
   color: #595959;
   font-weight: 400;
+  overflow: visible; /* STT không cần ellipsis */
+}
+
+.asset-table__td--code {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.asset-table__td--name {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+}
+
+.asset-table__td--type {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
+
+.asset-table__td--department {
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
 }
 
 .asset-table__td--number {
@@ -1029,9 +1439,38 @@ const handleCancelForm = () => {
   padding-right: 16px;
 }
 
+.asset-table__td--quantity {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  text-align: right;
+  font-family: 'Roboto', sans-serif;
+  font-variant-numeric: tabular-nums;
+  padding-right: 16px;
+}
+
+.asset-table__td--cost {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.asset-table__td--depreciation {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.asset-table__td--remaining {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
 .asset-table__td--actions {
   text-align: center;
   padding: 4px 8px;
+  overflow: visible; /* Actions không cần ellipsis */
 }
 
 .action-btn {
@@ -1271,6 +1710,43 @@ const handleCancelForm = () => {
   font-family: 'Roboto', sans-serif;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* ============================================ */
+/* RESPONSIVE                                   */
+/* ============================================ */
+
+/* ============================================ */
+/* LOADING & ERROR                              */
+/* ============================================ */
+
+.asset-list__loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background-color: #ffffff;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  margin-bottom: 16px;
+}
+
+.loading-spinner {
+  font-size: 14px;
+  color: #595959;
+}
+
+.asset-list__error {
+  padding: 16px;
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.error-message {
+  color: #ff4d4f;
+  font-size: 14px;
 }
 
 /* ============================================ */

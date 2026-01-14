@@ -24,14 +24,6 @@ const router = createRouter({
             title: 'Danh sách tài sản'
           }
         },
-        {
-          path: 'components',
-          name: 'component-demo',
-          component: () => import('../views/ComponentDemo.vue'),
-          meta: {
-            title: 'Component Library'
-          }
-        },
         // TODO: Thêm các routes khác ở đây
       ]
     }
