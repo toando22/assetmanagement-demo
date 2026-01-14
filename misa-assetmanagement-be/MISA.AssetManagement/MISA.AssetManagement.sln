@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MISA.AssetManagement.Core", "MISA.AssetManagement.Core\MISA.AssetManagement.Core.csproj", "{787E7CB3-DCF1-4B0A-9C69-5396656D83E6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MISA.AssetManagement.Infrastructure", "MISA.AssetManagement.Infrastructure\MISA.AssetManagement.Infrastructure.csproj", "{CA96066A-D996-4C33-A308-91968B6396B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MISA.AssetManagement.Api", "MISA.AssetManagement.Api\MISA.AssetManagement.Api.csproj", "{357D6969-05B0-431E-A340-910C63289B0B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{787E7CB3-DCF1-4B0A-9C69-5396656D83E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{787E7CB3-DCF1-4B0A-9C69-5396656D83E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{787E7CB3-DCF1-4B0A-9C69-5396656D83E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{787E7CB3-DCF1-4B0A-9C69-5396656D83E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA96066A-D996-4C33-A308-91968B6396B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA96066A-D996-4C33-A308-91968B6396B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA96066A-D996-4C33-A308-91968B6396B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA96066A-D996-4C33-A308-91968B6396B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{357D6969-05B0-431E-A340-910C63289B0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{357D6969-05B0-431E-A340-910C63289B0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{357D6969-05B0-431E-A340-910C63289B0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{357D6969-05B0-431E-A340-910C63289B0B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DE8EBC69-AEA8-429B-BF5A-CF99B87F5B3D}
+	EndGlobalSection
+EndGlobal
