@@ -104,7 +104,7 @@
     <!-- Table Container -->
     <div class="asset-list__container" v-if="!loading">
       <!-- Table -->
-      <div class="asset-list__table-wrapper">
+      <div class="asset-list__table-wrapper" ref="tableWrapperRef">
         <table class="asset-table">
           <thead class="asset-table__head">
             <tr>
@@ -185,6 +185,9 @@
                         :model-value="pageSize"
                         :options="pageSizeDropdownOptions"
                         class="asset-table__pagination-dropdown"
+                        teleport
+                        placement="top"
+                        :scroll-container="tableWrapperRef"
                         @update:model-value="setPageSize"
                       />
                     </div>
@@ -306,7 +309,7 @@ import MsDialog from '@/components/base/ms-dialog/MsDialog.vue'
 import MsContextMenu from '@/components/base/ms-context-menu/MsContextMenu.vue'
 import { usePagination } from '@/composables/usePagination'
 import { useKeyboardNavigation } from '@/composables/useKeyboardNavigation'
-import { getFixedAssets } from '@/api/fixedAssetApi'
+import { getFixedAssets, getNewAssetCode } from '@/api/fixedAssetApi'
 import { getDepartments } from '@/api/departmentApi'
 import { getFixedAssetCategories } from '@/api/fixedAssetCategoryApi'
 
@@ -349,6 +352,7 @@ const categoryMap = ref(new Map()) // Map<categoryId, {code, name}>
 const assetTypeDropdownRef = ref(null)
 const departmentDropdownRef = ref(null)
 const measureRef = ref(null)
+const tableWrapperRef = ref(null)
 
 // Tính toán width của item dài nhất
 const calculateMaxWidth = (options) => {
@@ -453,7 +457,7 @@ const mapAssetFromApi = (apiAsset) => {
     purchaseDate: formatDate(apiAsset.fixedAssetPurchaseDate || apiAsset.fixed_asset_purchase_date || apiAsset.purchaseDate),
     startUseDate: formatDate(apiAsset.fixedAssetStartUseDate || apiAsset.fixed_asset_start_use_date || apiAsset.startUseDate),
     trackingYear: apiAsset.fixedAssetTrackingYear || apiAsset.fixed_asset_tracking_year || apiAsset.trackingYear || '',
-    yearsOfUse: apiAsset.fixedAssetLifeTime || apiAsset.fixed_asset_life_time || apiAsset.yearsOfUse || 0,
+    yearsOfUse: apiAsset.fixedAssetYearsOfUse || apiAsset.fixed_asset_years_of_use || apiAsset.fixedAssetLifeTime || apiAsset.fixed_asset_life_time || apiAsset.yearsOfUse || 0, // EditBy: DDToan - (16/1/2026) - Ưu tiên fixedAssetYearsOfUse, giữ fallback cho tương thích ngược
     annualDepreciationValue: apiAsset.fixedAssetAnnualDepreciationValue || apiAsset.fixed_asset_annual_depreciation_value || apiAsset.annualDepreciationValue || 0
   }
 }
@@ -556,8 +560,9 @@ const loadAssets = async (page = null, size = null) => {
     const currentPageSize = size !== null ? size : pageSize.value
     
     // Gọi API lấy danh sách tài sản với pagination params
+    // EditBy: DDToan - (17/1/2026) - Sửa page → pageIndex để khớp với backend API
     const response = await getFixedAssets({
-      page: currentPageNum,
+      pageIndex: currentPageNum,
       pageSize: currentPageSize
     })
     
@@ -694,10 +699,48 @@ const formatNumber = (num) => {
   return Number(num).toLocaleString('vi-VN')
 }
 
-const handleAddAsset = () => {
-  selectedAssetData.value = null
-  formTitle.value = 'Thêm tài sản'
-  isFormOpen.value = true
+/*
+  Mô tả: Xử lý khi click nút "Thêm tài sản"
+  - Gọi API lấy mã tài sản mới TRƯỚC KHI mở form
+  - Truyền mã mới vào AssetForm thông qua selectedAssetData
+  CreatedBy: DDToan - (09/1/2026)
+  EditBy: DDToan - (16/1/2026) - Gọi API lấy mã mới trước khi mở form để đảm bảo mã luôn mới nhất
+*/
+/*
+  Mô tả: Xử lý khi click nút "Thêm tài sản"
+  EditBy: DDToan - (16/1/2026) - Cải thiện validation mã trước khi mở form
+*/
+const handleAddAsset = async () => {
+  try {
+    // Gọi API lấy mã mới TRƯỚC KHI mở form
+    // getNewAssetCode() đã được cải thiện để luôn trả về string hợp lệ hoặc throw error
+    const assetCode = await getNewAssetCode()
+    
+    // Validate mã: phải là string không rỗng
+    if (!assetCode || typeof assetCode !== 'string' || assetCode.trim() === '') {
+      console.error('handleAddAsset: Invalid asset code received:', assetCode)
+      throw new Error('Không thể lấy mã tài sản mới. Vui lòng thử lại.')
+    }
+    
+    // Tạo object với mã mới và flag isNew để AssetForm nhận biết đây là thêm mới
+    selectedAssetData.value = {
+      code: assetCode.trim(), // Mã mới từ API (đã được validate)
+      isNew: true // Flag để phân biệt với edit mode
+    }
+    
+    formTitle.value = 'Thêm tài sản'
+    isFormOpen.value = true
+  } catch (error) {
+    console.error('Error getting new asset code:', error)
+    // Fallback: Vẫn mở form nhưng để AssetForm tự sinh mã (retry logic)
+    // AssetForm sẽ tự gọi API lại khi mở form
+    selectedAssetData.value = {
+      code: '', // Để AssetForm tự sinh mã
+      isNew: true
+    }
+    formTitle.value = 'Thêm tài sản'
+    isFormOpen.value = true
+  }
 }
 
 const handleEdit = (asset) => {
@@ -727,9 +770,19 @@ const handleSaveAsset = (assetData) => {
   CreatedBy: DDToan - (14/1/2026)
   EditBy: DDToan - (14/1/2026) - Reload với trang hiện tại
 */
+/*
+  Mô tả: Xử lý sau khi save thành công - Reload danh sách từ API
+  CreatedBy: DDToan - (14/1/2026)
+  EditBy: DDToan - (14/1/2026) - Reload với trang hiện tại
+  EditBy: DDToan - (16/1/2026) - Reset selectedAssetData để lần sau mở form sẽ lấy mã mới
+  EditBy: DDToan - (17/1/2026) - Form đã được đóng trong AssetForm, chỉ cần reload danh sách
+*/
 const handleAssetSaved = async () => {
   // Reload danh sách tài sản từ API sau khi save thành công (giữ nguyên trang hiện tại)
   await loadAssets(currentPage.value, pageSize.value)
+  
+  // Reset selectedAssetData để lần sau mở form sẽ lấy mã mới từ API
+  selectedAssetData.value = null
 }
 
 const handleCancelForm = () => {
@@ -1623,6 +1676,7 @@ const handleContextMenuSelect = (item) => {
 .asset-table__pagination-dropdown :deep(.ms-dropdown__menu) {
   top: auto !important;
   bottom: calc(100% + 4px) !important;
+ z-index: 9999 !important;  /* ← Thêm dòng này */
 }
 
 /* Pagination Navigation */

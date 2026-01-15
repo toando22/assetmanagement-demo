@@ -7,8 +7,9 @@ import axiosClient from './axiosClient'
 
 /**
  * Lấy danh sách tài sản
- * @param {object} params - Query parameters (page, pageSize, search, assetTypeId, departmentId)
+ * @param {object} params - Query parameters (pageIndex, pageSize, keyword, departmentId, categoryId)
  * @returns {Promise} - Danh sách tài sản
+ * EditBy: DDToan - (17/1/2026) - Cập nhật comment để khớp với backend API params
  */
 export const getFixedAssets = async (params = {}) => {
   try {
@@ -39,14 +40,53 @@ export const getFixedAssetById = async (id) => {
 
 /**
  * Lấy mã tài sản mới tự động
- * @returns {Promise} - Mã tài sản mới (ví dụ: "TS00001")
+ * @returns {Promise<string>} - Mã tài sản mới (ví dụ: "TS00001")
+ * EditBy: DDToan - (16/1/2026) - Cải thiện parse response và validation
  */
 export const getNewAssetCode = async () => {
   try {
     const response = await axiosClient.get('/api/v1/fixed-assets/new-code')
-    return response
+    
+    // Backend trả về Ok(code) → response.data = string
+    // Nhưng cần xử lý các trường hợp khác nhau
+    let code = ''
+    
+    if (typeof response === 'string') {
+      // Trường hợp 1: Response là string trực tiếp
+      code = response.trim()
+    } else if (response && typeof response === 'object') {
+      // Trường hợp 2: Response là object
+      if (response.code && typeof response.code === 'string') {
+        code = response.code.trim()
+      } else if (response.data) {
+        // Trường hợp 3: Response có property data
+        if (typeof response.data === 'string') {
+          code = response.data.trim()
+        } else if (response.data.code && typeof response.data.code === 'string') {
+          code = response.data.code.trim()
+        }
+      } else if (typeof response === 'object' && Object.keys(response).length === 0) {
+        // Trường hợp 4: Response là object rỗng
+        console.warn('getNewAssetCode: Received empty object response')
+      }
+    }
+    
+    // Validate mã: phải là string không rỗng và có format hợp lệ (TS + số)
+    if (!code || code.trim() === '') {
+      console.error('getNewAssetCode: Invalid response format, received:', response)
+      throw new Error('Không thể lấy mã tài sản mới từ server')
+    }
+    
+    // Kiểm tra format cơ bản (TS + số)
+    if (!/^TS\d+$/.test(code)) {
+      console.warn('getNewAssetCode: Code format may be invalid:', code)
+      // Vẫn trả về nếu có giá trị, để backend validate
+    }
+    
+    return code
   } catch (error) {
     console.error('Error in getNewAssetCode:', error)
+    // Re-throw để caller có thể handle
     throw error
   }
 }

@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Extensions.Configuration;
 using MISA.AssetManagement.Core.Interface.Repository;
+using MISA.AssetManagement.Core.MisaAttribute;
 using MySqlConnector;
 using System;
 using System.Collections.Generic;
@@ -49,25 +50,79 @@ namespace MISA.AssetManagement.Infrastructure.Repository
                 }
             }
 
-            public virtual async Task<int> InsertAsync(T entity)
+        /// <summary>
+        /// Thêm mới bản ghi
+        /// EditBy: DDTOAN - 15/01/2026 - Fix lỗi mapping tham số Dapper (PascalCase -> snake_case) và tự sinh ID
+        /// </summary>
+        public virtual async Task<int> InsertAsync(T entity)
+        {
+            using (var conn = CreateConnection())
             {
-                using (var conn = CreateConnection())
-                {
-                    var procName = $"Proc_Insert{typeof(T).Name}";
-                    return await conn.ExecuteAsync(procName, entity, commandType: CommandType.StoredProcedure);
-                }
-            }
+                var procName = $"Proc_Insert{typeof(T).Name}";
 
-            public virtual async Task<int> UpdateAsync(Guid id, T entity)
+                // 1. Tự động sinh ID mới nếu chưa có (Guid.Empty)
+                var props = typeof(T).GetProperties();
+                var pkProp = props.FirstOrDefault(p => p.GetCustomAttributes(typeof(MISAKey), true).Length > 0);
+
+                if (pkProp != null && (Guid)pkProp.GetValue(entity) == Guid.Empty)
+                {
+                    pkProp.SetValue(entity, Guid.NewGuid());
+                }
+
+                // 2. Map tham số thủ công sang snake_case để khớp với Stored Procedure
+                var parameters = new DynamicParameters();
+                foreach (var prop in props)
+                {
+                    var value = prop.GetValue(entity);
+                    var name = ConvertToSnakeCase(prop.Name); // Chuyển FixedAssetId -> fixed_asset_id
+                    parameters.Add(name, value);
+                }
+
+                return await conn.ExecuteAsync(procName, parameters, commandType: CommandType.StoredProcedure);
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật bản ghi
+        /// EditBy: DDTOAN - 15/01/2026 - Fix lỗi mapping tham số Dapper (PascalCase -> snake_case)
+        /// EditBy: DDTOAN - 16/01/2026 - Sửa logic lấy giá trị Khóa Chính từ tham số 'id' thay vì từ Entity
+        /// </summary>
+        public virtual async Task<int> UpdateAsync(Guid id, T entity)
+        {
+            using (var conn = CreateConnection())
             {
-                using (var conn = CreateConnection())
-                {
-                    var procName = $"Proc_Update{typeof(T).Name}";
-                    return await conn.ExecuteAsync(procName, entity, commandType: CommandType.StoredProcedure);
-                }
-            }
+                var procName = $"Proc_Update{typeof(T).Name}";
 
-            public virtual async Task<int> DeleteAsync(Guid id)
+                var parameters = new DynamicParameters();
+                var props = typeof(T).GetProperties();
+
+                foreach (var prop in props)
+                {
+                    // 1. Map tên tham số sang Snake_Case (VD: FixedAssetCode -> fixed_asset_code)
+                    var name = ConvertToSnakeCase(prop.Name);
+
+                    // 2. Lấy giá trị từ Entity (Dữ liệu từ Body JSON)
+                    var value = prop.GetValue(entity);
+
+                    // 3. LOGIC XỬ LÝ ID CHUYÊN NGHIỆP:
+                    // Nếu property hiện tại là Khóa Chính (có attribute [MISAKey])
+                    // -> Ta BẮT BUỘC lấy giá trị từ tham số 'id' (trên URL)
+                    // -> Điều này đảm bảo tính nhất quán và sửa đúng bản ghi cần sửa.
+                    if (prop.IsDefined(typeof(MISAKey), true))
+                    {
+                        value = id;
+                    }
+
+                    parameters.Add(name, value);
+                }
+
+                // Thực thi Stored Procedure
+                var rowsAffected = await conn.ExecuteAsync(procName, parameters, commandType: CommandType.StoredProcedure);
+                return rowsAffected;
+            }
+        }
+
+        public virtual async Task<int> DeleteAsync(Guid id)
             {
                 using (var conn = CreateConnection())
                 {

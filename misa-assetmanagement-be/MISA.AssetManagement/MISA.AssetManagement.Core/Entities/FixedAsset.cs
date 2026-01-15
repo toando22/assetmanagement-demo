@@ -33,9 +33,6 @@ namespace MISA.AssetManagement.Core.Entities
         [MISAPropertyName("Loại tài sản")]
         public Guid FixedAssetCategoryId { get; set; }
 
-        public string? DepartmentName { get; set; }
-        public string? FixedAssetCategoryName { get; set; }
-
         [MISARequired("Ngày mua không được để trống")]
         public DateTime FixedAssetPurchaseDate { get; set; }
 
@@ -54,7 +51,7 @@ namespace MISA.AssetManagement.Core.Entities
         public int FixedAssetTrackingYear { get; set; }
 
         [MISARequired("Số năm sử dụng không được để trống")]
-        public int FixedAssetLifeTime { get; set; }
+        public int FixedAssetYearsOfUse { get; set; }
 
         public int FixedAssetProductionYear { get; set; }
 

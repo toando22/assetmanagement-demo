@@ -7,13 +7,14 @@
 -->
 
 <template>
-  <div class="ms-dropdown" :class="{ 'ms-dropdown--open': isOpen }">
-    <div class="ms-dropdown__trigger" @click="toggleDropdown">
+  <div class="ms-dropdown" :class="{ 'ms-dropdown--open': isOpen }" ref="dropdownRef">
+    <div class="ms-dropdown__trigger" @click="toggleDropdown" ref="triggerRef">
       <span class="ms-dropdown__text">{{ selectedText }}</span>
       <i class="ms-dropdown__arrow icon icon-chevron-down-toolbar"></i>
     </div>
 
-    <transition name="dropdown-fade">
+    <!-- Menu render bình thường (khi không teleport) -->
+    <transition v-if="!teleport" name="dropdown-fade">
       <div v-if="isOpen" class="ms-dropdown__menu">
         <!-- Regular dropdown -->
         <div v-if="!withCheckbox && !withTable" class="ms-dropdown__list">
@@ -72,6 +73,74 @@
         </div>
       </div>
     </transition>
+
+    <!-- Menu render bằng Teleport (khi teleport = true) -->
+    <Teleport v-if="teleport" to="body">
+      <transition name="dropdown-fade">
+        <div 
+          v-if="isOpen" 
+          class="ms-dropdown__menu ms-dropdown__menu--teleported"
+          :style="teleportedMenuStyle"
+          ref="menuRef"
+        >
+          <!-- Regular dropdown -->
+          <div v-if="!withCheckbox && !withTable" class="ms-dropdown__list">
+            <div
+              v-for="option in options"
+              :key="option.value"
+              class="ms-dropdown__item"
+              :class="{ 'ms-dropdown__item--selected': option.value === modelValue }"
+              @click="selectOption(option)"
+            >
+              <i v-if="option.value === modelValue" class="ms-dropdown__check icon icon-check"></i>
+              {{ option.label }}
+            </div>
+          </div>
+
+          <!-- Dropdown with checkbox -->
+          <div v-if="withCheckbox" class="ms-dropdown__list">
+            <div
+              v-for="option in options"
+              :key="option.value"
+              class="ms-dropdown__item ms-dropdown__item--checkbox"
+              @click.stop="toggleCheckbox(option)"
+            >
+              <input
+                type="checkbox"
+                :checked="isChecked(option.value)"
+                @click.stop
+                @change="toggleCheckbox(option)"
+              />
+              <span>{{ option.label }}</span>
+            </div>
+          </div>
+
+          <!-- Table dropdown -->
+          <div v-if="withTable" class="ms-dropdown__table">
+            <table class="ms-dropdown__table-content">
+              <thead>
+                <tr>
+                  <th>Mã</th>
+                  <th>Tên</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="option in options"
+                  :key="option.value"
+                  class="ms-dropdown__table-row"
+                  :class="{ 'ms-dropdown__table-row--selected': option.value === modelValue }"
+                  @click="selectOption(option)"
+                >
+                  <td>{{ option.value }}</td>
+                  <td>{{ option.label }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -82,7 +151,7 @@
   CreatedBy: DDToan - (09/1/2026)
 */
 
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -105,11 +174,29 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  teleport: {
+    type: Boolean,
+    default: false,
+  },
+  placement: {
+    type: String,
+    default: 'bottom', // 'top' | 'bottom'
+    validator: (value) => ['top', 'bottom'].includes(value),
+  },
+  scrollContainer: {
+    type: [HTMLElement, String, Object],
+    default: null, // Element, selector string, hoặc Vue ref
+  },
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
 
 const isOpen = ref(false)
+const dropdownRef = ref(null)
+const triggerRef = ref(null)
+const menuRef = ref(null)
+const teleportedMenuStyle = ref({ visibility: 'hidden' }) // Ẩn ban đầu để tránh flicker
+const scrollContainerRef = ref(null)
 
 const selectedText = computed(() => {
   if (props.withCheckbox) {
@@ -128,6 +215,79 @@ const selectedText = computed(() => {
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value
+  if (isOpen.value && props.teleport) {
+    // Ẩn menu ban đầu để tránh flicker
+    teleportedMenuStyle.value = { visibility: 'hidden' }
+    nextTick(() => {
+      updateTeleportedMenuPosition()
+    })
+  }
+}
+
+// Tính toán vị trí cho menu teleported
+const updateTeleportedMenuPosition = () => {
+  if (!triggerRef.value || !menuRef.value) return
+
+  const triggerRect = triggerRef.value.getBoundingClientRect()
+  const menu = menuRef.value
+  
+  // Đo menu height (có thể cần force reflow)
+  const tempVisibility = menu.style.visibility
+  menu.style.visibility = 'hidden'
+  menu.style.display = 'block'
+  const menuHeight = menu.offsetHeight || 240
+  const menuWidth = triggerRect.width
+  menu.style.visibility = tempVisibility
+  menu.style.display = ''
+
+  let top, left
+
+  if (props.placement === 'top') {
+    // Mở lên trên
+    top = triggerRect.top - menuHeight - 4
+    // Nếu không đủ chỗ phía trên, mở xuống dưới
+    if (top < 0) {
+      top = triggerRect.bottom + 4
+    }
+  } else {
+    // Mở xuống dưới
+    top = triggerRect.bottom + 4
+    // Nếu không đủ chỗ phía dưới, mở lên trên
+    if (top + menuHeight > window.innerHeight) {
+      top = triggerRect.top - menuHeight - 4
+    }
+  }
+
+  left = triggerRect.left
+  // Kiểm tra boundaries ngang
+  if (left + menuWidth > window.innerWidth) {
+    left = window.innerWidth - menuWidth - 8
+  }
+  if (left < 0) {
+    left = 8
+  }
+
+  teleportedMenuStyle.value = {
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${menuWidth}px`,
+    zIndex: '10000',
+    visibility: 'visible', // Hiện sau khi tính toán xong
+  }
+}
+
+// Tự động cập nhật vị trí khi scroll hoặc resize
+let updatePositionTimer = null
+const scheduleUpdatePosition = () => {
+  if (updatePositionTimer) {
+    cancelAnimationFrame(updatePositionTimer)
+  }
+  updatePositionTimer = requestAnimationFrame(() => {
+    if (isOpen.value && props.teleport) {
+      updateTeleportedMenuPosition()
+    }
+  })
 }
 
 const selectOption = (option) => {
@@ -164,10 +324,60 @@ const toggleCheckbox = (option) => {
 
 const handleClickOutside = (event) => {
   const dropdown = event.target.closest('.ms-dropdown')
-  if (!dropdown) {
+  const teleportedMenu = menuRef.value && menuRef.value.contains(event.target)
+  if (!dropdown && !teleportedMenu) {
     isOpen.value = false
   }
 }
+
+// Tìm scroll container
+const findScrollContainer = () => {
+  if (!props.scrollContainer) return null
+  
+  // Nếu là Vue ref (có .value)
+  if (props.scrollContainer && typeof props.scrollContainer === 'object' && 'value' in props.scrollContainer) {
+    return props.scrollContainer.value
+  }
+  
+  if (typeof props.scrollContainer === 'string') {
+    // Nếu là selector string
+    return document.querySelector(props.scrollContainer)
+  }
+  
+  // Nếu là HTMLElement
+  return props.scrollContainer
+}
+
+// Watch isOpen để thêm/xóa event listeners
+watch(
+  () => isOpen.value && props.teleport,
+  (shouldListen) => {
+    if (shouldListen) {
+      // Tìm scroll container
+      scrollContainerRef.value = findScrollContainer()
+      
+      // Thêm listeners khi mở
+      nextTick(() => {
+        window.addEventListener('scroll', scheduleUpdatePosition, true)
+        window.addEventListener('resize', scheduleUpdatePosition)
+        
+        // Lắng nghe scroll của container nếu có
+        if (scrollContainerRef.value) {
+          scrollContainerRef.value.addEventListener('scroll', scheduleUpdatePosition, { passive: true })
+        }
+      })
+    } else {
+      // Xóa listeners khi đóng
+      window.removeEventListener('scroll', scheduleUpdatePosition, true)
+      window.removeEventListener('resize', scheduleUpdatePosition)
+      
+      if (scrollContainerRef.value) {
+        scrollContainerRef.value.removeEventListener('scroll', scheduleUpdatePosition)
+      }
+    }
+  },
+  { immediate: false }
+)
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
@@ -175,6 +385,16 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', scheduleUpdatePosition, true)
+  window.removeEventListener('resize', scheduleUpdatePosition)
+  
+  if (scrollContainerRef.value) {
+    scrollContainerRef.value.removeEventListener('scroll', scheduleUpdatePosition)
+  }
+  
+  if (updatePositionTimer) {
+    cancelAnimationFrame(updatePositionTimer)
+  }
 })
 </script>
 
@@ -244,7 +464,13 @@ onBeforeUnmount(() => {
   border-radius: 2px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 9999;
+}
+
+/* Menu teleported */
+.ms-dropdown__menu--teleported {
+  position: fixed !important;
+  max-height: 240px;
 }
 
 .ms-dropdown__list {
