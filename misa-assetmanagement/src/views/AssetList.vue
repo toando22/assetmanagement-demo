@@ -232,19 +232,19 @@
 
               <!-- Totals columns - căn thẳng với các cột tương ứng -->
               <td class="asset-table__td asset-table__td--number">
-                <span class="asset-table__total-item">{{ selectedTotals.quantity }}</span>
+                <span class="asset-table__total-item">{{ pageTotals.quantity }}</span>
               </td>
               <td class="asset-table__td asset-table__td--number">
-                <span class="asset-table__total-item">{{ formatNumber(selectedTotals.cost) }}</span>
+                <span class="asset-table__total-item">{{ formatNumber(pageTotals.cost) }}</span>
               </td>
               <td class="asset-table__td asset-table__td--number">
                 <span class="asset-table__total-item">{{
-                  formatNumber(selectedTotals.depreciation)
+                  formatNumber(pageTotals.depreciation)
                 }}</span>
               </td>
               <td class="asset-table__td asset-table__td--number">
                 <span class="asset-table__total-item">{{
-                  formatNumber(selectedTotals.remainingValue)
+                  formatNumber(pageTotals.remainingValue)
                 }}</span>
               </td>
               <td class="asset-table__td asset-table__td--actions"></td>
@@ -309,7 +309,7 @@ import MsDialog from '@/components/base/ms-dialog/MsDialog.vue'
 import MsContextMenu from '@/components/base/ms-context-menu/MsContextMenu.vue'
 import { usePagination } from '@/composables/usePagination'
 import { useKeyboardNavigation } from '@/composables/useKeyboardNavigation'
-import { getFixedAssets, getNewAssetCode } from '@/api/fixedAssetApi'
+import { getFixedAssets, getNewAssetCode, deleteFixedAsset, deleteMultipleFixedAssets, cloneFixedAsset } from '@/api/fixedAssetApi'
 import { getDepartments } from '@/api/departmentApi'
 import { getFixedAssetCategories } from '@/api/fixedAssetCategoryApi'
 
@@ -541,11 +541,16 @@ const {
 })
 
 /**
- * Load danh sách tài sản từ API với pagination
+ * Load danh sách tài sản từ API với pagination, search và filters
  * @param {number} page - Số trang (mặc định: currentPage.value)
  * @param {number} size - Số bản ghi mỗi trang (mặc định: pageSize.value)
+ * @param {string} keyword - Từ khóa tìm kiếm (mặc định: searchText.value)
+ * @param {string} departmentId - ID bộ phận sử dụng (mặc định: selectedDepartment.value)
+ * @param {string} categoryId - ID loại tài sản (mặc định: selectedAssetType.value)
+ * CreatedBy: DDToan - (09/1/2026)
+ * EditBy: DDToan - (17/1/2026) - Thêm support cho search và filters
  */
-const loadAssets = async (page = null, size = null) => {
+const loadAssets = async (page = null, size = null, keyword = null, departmentId = null, categoryId = null) => {
   try {
     loading.value = true
     errorMessage.value = ''
@@ -559,11 +564,19 @@ const loadAssets = async (page = null, size = null) => {
     const currentPageNum = page !== null ? page : currentPage.value
     const currentPageSize = size !== null ? size : pageSize.value
     
-    // Gọi API lấy danh sách tài sản với pagination params
-    // EditBy: DDToan - (17/1/2026) - Sửa page → pageIndex để khớp với backend API
+    // Lấy keyword và filters từ params hoặc từ state hiện tại
+    const searchKeyword = keyword !== null ? keyword : (searchText.value || null)
+    const filterDepartmentId = departmentId !== null ? departmentId : (selectedDepartment.value || null)
+    const filterCategoryId = categoryId !== null ? categoryId : (selectedAssetType.value || null)
+    
+    // Gọi API lấy danh sách tài sản với pagination, search và filters
+    // EditBy: DDToan - (17/1/2026) - Thêm keyword, departmentId, categoryId để hỗ trợ search và filter
     const response = await getFixedAssets({
       pageIndex: currentPageNum,
-      pageSize: currentPageSize
+      pageSize: currentPageSize,
+      keyword: searchKeyword,
+      departmentId: filterDepartmentId,
+      categoryId: filterCategoryId
     })
     
     // Xử lý response - có thể là array hoặc object có data property
@@ -617,7 +630,7 @@ onMounted(() => {
 // Watch: Khi currentPage thay đổi, gọi lại API với trang mới
 watch(currentPage, (newPage) => {
   if (newPage > 0) {
-    loadAssets(newPage, pageSize.value)
+    loadAssets(newPage, pageSize.value, null, null, null) // Giữ nguyên search và filters
   }
 })
 
@@ -625,8 +638,50 @@ watch(currentPage, (newPage) => {
 // Lưu ý: setPageSize trong composable đã reset về trang 1, nên sẽ gọi với page = 1
 watch(pageSize, (newSize) => {
   if (newSize > 0) {
-    loadAssets(currentPage.value, newSize)
+    loadAssets(currentPage.value, newSize, null, null, null) // Giữ nguyên search và filters
   }
+})
+
+/*
+  Mô tả: Watch searchText với debounce 300ms - Tự động search khi user ngừng gõ
+  CreatedBy: DDToan - (17/1/2026)
+*/
+let searchTimeout = null
+watch(searchText, (newValue) => {
+  // Clear timeout cũ nếu có
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  
+  // Debounce: đợi 300ms sau khi user ngừng gõ mới gọi API
+  searchTimeout = setTimeout(() => {
+    // Reset về trang 1 khi search
+    goToPage(1)
+    // Gọi API với keyword mới, giữ nguyên filters
+    loadAssets(1, pageSize.value, newValue, null, null)
+  }, 300)
+})
+
+/*
+  Mô tả: Watch selectedAssetType - Filter theo loại tài sản, hiển thị ngay tức thì
+  CreatedBy: DDToan - (17/1/2026)
+*/
+watch(selectedAssetType, (newValue) => {
+  // Reset về trang 1 khi filter
+  goToPage(1)
+  // Gọi API với filter mới, giữ nguyên search và filter department
+  loadAssets(1, pageSize.value, null, null, newValue)
+})
+
+/*
+  Mô tả: Watch selectedDepartment - Filter theo bộ phận sử dụng, hiển thị ngay tức thì
+  CreatedBy: DDToan - (17/1/2026)
+*/
+watch(selectedDepartment, (newValue) => {
+  // Reset về trang 1 khi filter
+  goToPage(1)
+  // Gọi API với filter mới, giữ nguyên search và filter category
+  loadAssets(1, pageSize.value, null, newValue, null)
 })
 
 
@@ -672,13 +727,18 @@ const pageSizeDropdownOptions = computed(() => {
   }))
 })
 
-const selectedTotals = computed(() => {
-  const selected = assets.value.filter((asset) => selectedAssets.value.includes(asset.id))
+/*
+  Mô tả: Tính tổng của tất cả bản ghi trong trang hiện tại
+  CreatedBy: DDToan - (09/1/2026)
+  EditBy: DDToan - (17/1/2026) - Đổi từ tổng các bản ghi được chọn sang tổng tất cả bản ghi trong trang
+*/
+const pageTotals = computed(() => {
+  // Tính tổng từ tất cả bản ghi trong trang hiện tại (paginatedAssets)
   return {
-    quantity: selected.reduce((sum, asset) => sum + (Number(asset.quantity) || 0), 0),
-    cost: selected.reduce((sum, asset) => sum + (Number(asset.cost) || 0), 0),
-    depreciation: selected.reduce((sum, asset) => sum + (Number(asset.depreciation) || 0), 0),
-    remainingValue: selected.reduce((sum, asset) => sum + (Number(asset.remainingValue) || 0), 0),
+    quantity: paginatedAssets.value.reduce((sum, asset) => sum + (Number(asset.quantity) || 0), 0),
+    cost: paginatedAssets.value.reduce((sum, asset) => sum + (Number(asset.cost) || 0), 0),
+    depreciation: paginatedAssets.value.reduce((sum, asset) => sum + (Number(asset.depreciation) || 0), 0),
+    remainingValue: paginatedAssets.value.reduce((sum, asset) => sum + (Number(asset.remainingValue) || 0), 0),
   }
 })
 
@@ -749,10 +809,49 @@ const handleEdit = (asset) => {
   isFormOpen.value = true
 }
 
-const handleDuplicate = (asset) => {
-  selectedAssetData.value = { ...asset, id: null, code: '' }
-  formTitle.value = 'Thêm tài sản'
-  isFormOpen.value = true
+/*
+  Mô tả: Xử lý nhân bản tài sản - Gọi API để lấy dữ liệu với mã mới
+  CreatedBy: DDToan - (09/1/2026)
+  EditBy: DDToan - (17/1/2026) - Tích hợp API nhân bản, xử lý lỗi và map dữ liệu
+*/
+const handleDuplicate = async (asset) => {
+  try {
+    // Đảm bảo master data đã được load (để map dữ liệu đúng)
+    if (departments.value.length === 0 || assetCategories.value.length === 0) {
+      await loadMasterData()
+    }
+    
+    // Gọi API nhân bản để lấy dữ liệu với mã mới từ backend
+    const clonedAsset = await cloneFixedAsset(asset.id)
+    
+    // Map từ API format sang frontend format
+    const mappedAsset = mapAssetFromApi(clonedAsset)
+    
+    // Set dữ liệu để mở form (đã có mã mới và ID reset từ backend)
+    // Đảm bảo ID được reset về null để AssetForm nhận biết đây là thêm mới (nhân bản)
+    selectedAssetData.value = {
+      ...mappedAsset,
+      id: null, // Reset ID để đảm bảo AssetForm nhận biết đây là thêm mới, không phải edit
+      isNew: true // Flag để phân biệt với edit mode
+    }
+    
+    formTitle.value = 'Thêm tài sản'
+    isFormOpen.value = true
+  } catch (error) {
+    console.error('Error cloning asset:', error)
+    
+    // Xử lý lỗi: hiển thị error message
+    let errorMsg = 'Không thể nhân bản tài sản. Vui lòng thử lại sau.'
+    if (error.message) {
+      errorMsg = error.message
+    } else if (error.userMsg) {
+      errorMsg = error.userMsg
+    } else if (error.response && error.response.userMsg) {
+      errorMsg = error.response.userMsg
+    }
+    
+    errorMessage.value = errorMsg
+  }
 }
 
 /*
@@ -778,8 +877,8 @@ const handleSaveAsset = (assetData) => {
   EditBy: DDToan - (17/1/2026) - Form đã được đóng trong AssetForm, chỉ cần reload danh sách
 */
 const handleAssetSaved = async () => {
-  // Reload danh sách tài sản từ API sau khi save thành công (giữ nguyên trang hiện tại)
-  await loadAssets(currentPage.value, pageSize.value)
+  // Reload danh sách tài sản từ API sau khi save thành công (giữ nguyên trang, search và filters)
+  await loadAssets(currentPage.value, pageSize.value, null, null, null)
   
   // Reset selectedAssetData để lần sau mở form sẽ lấy mã mới từ API
   selectedAssetData.value = null
@@ -815,32 +914,60 @@ const handleDeleteClick = () => {
   }
 }
 
-// Handler: Xác nhận xóa
-const handleConfirmDelete = () => {
+/*
+  Mô tả: Xử lý xác nhận xóa tài sản - Gọi API xóa và reload danh sách
+  CreatedBy: DDToan - (09/1/2026)
+  EditBy: DDToan - (17/1/2026) - Tích hợp API xóa, xử lý lỗi và reload danh sách sau khi xóa thành công
+*/
+const handleConfirmDelete = async () => {
   if (selectedAssets.value.length === 0) return
 
-  // Xóa tất cả các tài sản đã chọn
-  selectedAssets.value.forEach((assetId) => {
-    const index = assets.value.findIndex((a) => a.id === assetId)
-    if (index > -1) {
-      assets.value.splice(index, 1)
+  try {
+    loading.value = true
+    errorMessage.value = ''
+
+    // Gọi API xóa: xóa nhiều nếu > 1, xóa 1 nếu = 1
+    if (selectedAssets.value.length > 1) {
+      // Xóa nhiều tài sản
+      await deleteMultipleFixedAssets(selectedAssets.value)
+    } else {
+      // Xóa 1 tài sản
+      await deleteFixedAsset(selectedAssets.value[0])
     }
-  })
 
-  // Xóa tất cả khỏi danh sách selected
-  selectedAssets.value = []
+    // Xóa thành công → Reload danh sách từ API
+    await loadAssets(currentPage.value, pageSize.value, null, null, null) // Giữ nguyên search và filters
 
-  // Reset selectAll
-  selectAll.value = false
+    // Reset state
+    selectedAssets.value = []
+    selectAll.value = false
+    showDeleteDialog.value = false
+    assetToDelete.value = null
 
-  // Điều chỉnh trang nếu cần (nếu trang hiện tại không còn bản ghi)
-  if (paginatedAssets.value.length === 0 && currentPage.value > 1) {
-    goToPage(currentPage.value - 1)
+    // Điều chỉnh trang nếu cần (nếu trang hiện tại không còn bản ghi)
+    if (paginatedAssets.value.length === 0 && currentPage.value > 1) {
+      goToPage(currentPage.value - 1)
+    }
+  } catch (error) {
+    console.error('Error deleting assets:', error)
+    
+    // Xử lý lỗi: lấy message từ error response
+    let errorMsg = 'Có lỗi xảy ra khi xóa tài sản. Vui lòng thử lại sau.'
+    if (error.message) {
+      errorMsg = error.message
+    } else if (error.userMsg) {
+      errorMsg = error.userMsg
+    } else if (error.response && error.response.userMsg) {
+      errorMsg = error.response.userMsg
+    }
+    
+    errorMessage.value = errorMsg
+    
+    // Không đóng dialog để user có thể thử lại hoặc hủy
+    // showDeleteDialog.value = false // Comment lại để giữ dialog mở
+  } finally {
+    loading.value = false
   }
-
-  // Đóng dialog và reset
-  showDeleteDialog.value = false
-  assetToDelete.value = null
 }
 
 // Handler: Hủy xóa

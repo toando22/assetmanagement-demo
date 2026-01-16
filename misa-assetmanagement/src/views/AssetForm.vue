@@ -740,12 +740,34 @@ watch(
       
       // Mở form
       if (props.assetData && props.assetData.isNew) {
-        // Add mode: Lấy mã từ AssetList (đã được gọi API trước đó)
-        // EditBy: DDToan - (16/1/2026) - Loại bỏ logic "nghi ngờ" mã, chỉ lấy mã từ props
-        const preGeneratedCode = props.assetData.code || props.assetData.assetCode || ''
+        // Add mode hoặc Nhân bản mode
+        // EditBy: DDToan - (17/1/2026) - Kiểm tra nếu có dữ liệu đầy đủ (nhân bản) thì load vào form, nếu không thì reset form
+        const hasFullData = props.assetData.name || props.assetData.assetName || 
+                           props.assetData.departmentCode || props.assetData.assetTypeCode
         
-        // Lấy mã từ AssetList và gán vào form (không gọi lại API, không validate)
-        await resetForm(preGeneratedCode)
+        if (hasFullData) {
+          // Nhân bản mode: Load dữ liệu đầy đủ vào form
+          formData.value = {
+            assetCode: props.assetData.code || props.assetData.assetCode || '',
+            assetName: props.assetData.name || props.assetData.assetName || '',
+            departmentCode: props.assetData.departmentCode || '',
+            departmentName: props.assetData.departmentName || '',
+            assetTypeCode: props.assetData.assetTypeCode || '',
+            assetTypeName: props.assetData.assetTypeName || '',
+            quantity: props.assetData.quantity || 1,
+            originalCost: props.assetData.cost || props.assetData.originalCost || 0,
+            depreciationRate: props.assetData.depreciationRate || '',
+            purchaseDate: props.assetData.purchaseDate || formatDate(new Date()),
+            startUseDate: props.assetData.startUseDate || formatDate(new Date()),
+            trackingYear: props.assetData.trackingYear || new Date().getFullYear().toString(),
+            yearsOfUse: props.assetData.yearsOfUse || 0,
+            annualDepreciationValue: props.assetData.annualDepreciationValue || 0
+          }
+        } else {
+          // Add mode: Chỉ có mã, reset form về mặc định
+          const preGeneratedCode = props.assetData.code || props.assetData.assetCode || ''
+          await resetForm(preGeneratedCode)
+        }
       } else if (props.assetData && props.assetData.id) {
         // Edit mode: load data từ assetData
         formData.value = {

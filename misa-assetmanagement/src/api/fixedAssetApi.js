@@ -136,3 +136,37 @@ export const deleteFixedAsset = async (id) => {
     throw error
   }
 }
+
+/**
+ * Xóa nhiều tài sản
+ * @param {Array<string>} ids - Danh sách ID của các tài sản cần xóa
+ * @returns {Promise} - Kết quả xóa
+ * CreatedBy: DDToan - (17/1/2026)
+ */
+export const deleteMultipleFixedAssets = async (ids) => {
+  try {
+    const response = await axiosClient.delete('/api/v1/fixed-assets/batch-delete', {
+      data: ids // Axios DELETE với body cần dùng data property
+    })
+    return response
+  } catch (error) {
+    console.error('Error in deleteMultipleFixedAssets:', error)
+    throw error
+  }
+}
+
+/**
+ * Nhân bản tài sản - Lấy dữ liệu từ tài sản gốc với mã mới
+ * @param {string} sourceId - ID của tài sản gốc cần nhân bản
+ * @returns {Promise} - Dữ liệu tài sản đã nhân bản (có mã mới, ID reset)
+ * CreatedBy: DDToan - (17/1/2026)
+ */
+export const cloneFixedAsset = async (sourceId) => {
+  try {
+    const response = await axiosClient.get(`/api/v1/fixed-assets/${sourceId}/clone`)
+    return response
+  } catch (error) {
+    console.error('Error in cloneFixedAsset:', error)
+    throw error
+  }
+}
