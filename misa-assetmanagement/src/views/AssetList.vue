@@ -75,7 +75,7 @@
         </button>
 
         <!-- Button: Excel -->
-        <button class="btn btn--outline" title="Xuất Excel">
+        <button class="btn btn--outline" title="Xuất Excel" @click="handleExportExcelClick">
           <i class="icon icon-excel"></i>
         </button>
 
@@ -275,6 +275,15 @@
       @cancel="handleCancelDelete"
     />
 
+    <!-- Export Excel Confirmation Dialog -->
+    <MsDialog
+      v-model="showExportDialog"
+      type="confirm"
+      message="Bạn có muốn xuất danh sách tài sản ra file Excel không?"
+      :buttons="exportDialogButtons"
+      @button-click="handleExportDialogClick"
+    />
+
     <!-- Context Menu -->
     <MsContextMenu
       v-model="showContextMenu"
@@ -309,7 +318,7 @@ import MsDialog from '@/components/base/ms-dialog/MsDialog.vue'
 import MsContextMenu from '@/components/base/ms-context-menu/MsContextMenu.vue'
 import { usePagination } from '@/composables/usePagination'
 import { useKeyboardNavigation } from '@/composables/useKeyboardNavigation'
-import { getFixedAssets, getNewAssetCode, deleteFixedAsset, deleteMultipleFixedAssets, cloneFixedAsset } from '@/api/fixedAssetApi'
+import { getFixedAssets, getNewAssetCode, deleteFixedAsset, deleteMultipleFixedAssets, cloneFixedAsset, exportFixedAssetsToExcel } from '@/api/fixedAssetApi'
 import { getDepartments } from '@/api/departmentApi'
 import { getFixedAssetCategories } from '@/api/fixedAssetCategoryApi'
 
@@ -324,6 +333,7 @@ const selectedAssetData = ref(null)
 const formTitle = ref('Thêm tài sản')
 const showDeleteDialog = ref(false)
 const assetToDelete = ref(null)
+const showExportDialog = ref(false)
 const showContextMenu = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
@@ -900,6 +910,12 @@ const deleteDialogButtons = computed(() => [
   { label: 'Xóa', variant: 'primary', action: 'confirm' },
 ])
 
+// Computed: Buttons cho dialog xuất Excel
+const exportDialogButtons = computed(() => [
+  { label: 'Không', variant: 'outline', action: 'cancel' },
+  { label: 'Xuất Excel', variant: 'primary', action: 'confirm' },
+])
+
 // Handler: Click button xóa
 const handleDeleteClick = () => {
   if (selectedAssets.value.length === 0) return
@@ -974,6 +990,90 @@ const handleConfirmDelete = async () => {
 const handleCancelDelete = () => {
   showDeleteDialog.value = false
   assetToDelete.value = null
+}
+
+/*
+  Mô tả: Xử lý khi click button Excel - Hiển thị dialog xác nhận
+  CreatedBy: DDToan - (17/1/2026)
+*/
+const handleExportExcelClick = () => {
+  showExportDialog.value = true
+}
+
+/*
+  Mô tả: Xử lý click button trong Export Dialog
+  CreatedBy: DDToan - (17/1/2026)
+*/
+const handleExportDialogClick = (button) => {
+  if (button.action === 'confirm') {
+    // Xác nhận xuất Excel
+    showExportDialog.value = false
+    handleConfirmExport()
+  } else if (button.action === 'cancel') {
+    // Hủy
+    showExportDialog.value = false
+  }
+}
+
+/*
+  Mô tả: Xử lý xuất Excel - Gọi API và download file
+  CreatedBy: DDToan - (17/1/2026)
+*/
+const handleConfirmExport = async () => {
+  try {
+    loading.value = true
+    errorMessage.value = ''
+    
+    // Lấy filters hiện tại để truyền lên API
+    const exportParams = {
+      keyword: searchText.value || null,
+      departmentId: selectedDepartment.value || null,
+      categoryId: selectedAssetType.value || null,
+      trackingYear: 0 // Mặc định lấy tất cả, có thể thay đổi nếu cần filter theo năm
+    }
+    
+    // Gọi API xuất Excel
+    const blob = await exportFixedAssetsToExcel(exportParams)
+    
+    // Tạo URL từ Blob và trigger download
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // Tạo tên file với timestamp
+    const now = new Date()
+    const day = String(now.getDate()).padStart(2, '0')
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const year = now.getFullYear()
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    link.download = `Danh_sach_tai_san_${day}${month}${year}_${hours}${minutes}.xlsx`
+    
+    // Trigger download
+    document.body.appendChild(link)
+    link.click()
+    
+    // Cleanup
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+  } catch (error) {
+    console.error('Error exporting Excel:', error)
+    
+    // Xử lý lỗi
+    let errorMsg = 'Không thể xuất file Excel. Vui lòng thử lại sau.'
+    if (error.message) {
+      errorMsg = error.message
+    } else if (error.userMsg) {
+      errorMsg = error.userMsg
+    } else if (error.response && error.response.userMsg) {
+      errorMsg = error.response.userMsg
+    }
+    
+    errorMessage.value = errorMsg
+  } finally {
+    loading.value = false
+  }
 }
 
 // Computed: Context Menu Items

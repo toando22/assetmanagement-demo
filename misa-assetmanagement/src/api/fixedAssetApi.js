@@ -170,3 +170,22 @@ export const cloneFixedAsset = async (sourceId) => {
     throw error
   }
 }
+
+/**
+ * Xuất danh sách tài sản ra file Excel
+ * @param {object} params - Query parameters (keyword, departmentId, categoryId, trackingYear)
+ * @returns {Promise<Blob>} - File Excel dưới dạng Blob
+ * CreatedBy: DDToan - (17/1/2026)
+ */
+export const exportFixedAssetsToExcel = async (params = {}) => {
+  try {
+    const response = await axiosClient.get('/api/v1/fixed-assets/export', {
+      params: params,
+      responseType: 'blob' // Quan trọng: phải set responseType là 'blob' để nhận file
+    })
+    return response
+  } catch (error) {
+    console.error('Error in exportFixedAssetsToExcel:', error)
+    throw error
+  }
+}
