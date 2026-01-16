@@ -67,7 +67,7 @@ namespace MISA.AssetManagement.Api.Controllers
             [HttpDelete("{id}")]
             public virtual async Task<IActionResult> DeleteAsync(Guid id)
             {
-                var result = await _baseService.DeleteServiceAsync(id);
+                var result = await _baseService.DeleteAsync(id);
                 return Ok(result);
             }
             #endregion

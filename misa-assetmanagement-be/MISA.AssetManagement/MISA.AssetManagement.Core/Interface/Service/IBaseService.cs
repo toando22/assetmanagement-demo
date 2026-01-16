@@ -17,6 +17,6 @@ namespace MISA.AssetManagement.Core.Interface.Service
         Task<T> GetByIdAsync(Guid id);
         Task<int> InsertServiceAsync(T entity);
         Task<int> UpdateServiceAsync(Guid id, T entity);
-        Task<int> DeleteServiceAsync(Guid id);
+        Task<int> DeleteAsync(Guid id);
     }
 }
