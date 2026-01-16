@@ -22,7 +22,7 @@ namespace MISA.AssetManagement.Core.Interface.Repository
         /// CreatedBy: DDTOAN (14/01/2026)
         /// EditedBy: DDTOAN (15/01/2026) - Sửa kiểu trả về thành FixedAssetDto
         /// </summary>
-        Task<PagingResult<FixedAssetDto>> GetPagingAsync(int pageIndex, int pageSize, string keyword, Guid? departmentId, Guid? categoryId);
+        Task<PagingResult<FixedAssetDto>> GetPagingAsync(int pageIndex, int pageSize, string keyword, Guid? departmentId, Guid? categoryId, int trackingYear);
 
         /// <summary>
         /// Sửa tài sản
@@ -41,5 +41,12 @@ namespace MISA.AssetManagement.Core.Interface.Repository
         /// CreatedBy: DDTOAN (16/01/2026)
         /// </summary>
         Task<FixedAsset> GetByIdAsync(Guid fixedAssetId);
+
+        
+        /// <summary>
+        /// Lấy dữ liệu phục vụ xuất khẩu Excel
+        /// CreatedBy: DDTOAN (16/01/2026)
+        /// </summary>
+        Task<IEnumerable<FixedAssetDto>> GetExportDataAsync(string keyword, Guid? departmentId, Guid? categoryId, int trackingYear);
     }
 }

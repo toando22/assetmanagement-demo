@@ -31,9 +31,10 @@ namespace MISA.AssetManagement.Api.Controllers
             [FromQuery] int pageSize = 20,
             [FromQuery] string? keyword = null,
             [FromQuery] Guid? departmentId = null,
-            [FromQuery] Guid? categoryId = null)
+            [FromQuery] Guid? categoryId = null,
+            [FromQuery] int trackingYear = 0) // <--- MẶC ĐỊNH LÀ 0 (LẤY TẤT CẢ)
         {
-            var result = await _service.GetPagingAsync(pageIndex, pageSize, keyword, departmentId, categoryId);
+            var result = await _service.GetPagingAsync(pageIndex, pageSize, keyword, departmentId, categoryId, trackingYear);
             return Ok(result);
         }
 
@@ -116,6 +117,35 @@ namespace MISA.AssetManagement.Api.Controllers
             {
                 // Xử lý lỗi nếu không tìm thấy sourceId
                 return StatusCode(500, new { userMsg = "Không thể nhân bản tài sản này.", devMsg = ex.Message });
+            }
+        }
+     
+        /// <summary>
+        /// Xuất khẩu danh sách tài sản ra Excel
+        /// CreatedBy: DDTOAN (16/01/2026)
+        /// </summary>
+        [HttpGet("export")]
+        public async Task<IActionResult> Export(
+            [FromQuery] string? keyword = null,
+            [FromQuery] Guid? departmentId = null,
+            [FromQuery] Guid? categoryId = null,
+            [FromQuery] int trackingYear = 0)
+        {
+            try
+            {
+                // Gọi Service lấy file stream (dưới dạng byte array)
+                var excelData = await _service.ExportExcelAsync(keyword, departmentId, categoryId, trackingYear);
+
+                // Đặt tên file tải về
+                var fileName = $"Danh_sach_tai_san_{DateTime.Now.ToString("ddMMyyyy_HHmm")}.xlsx";
+                var contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+                // Trả về File
+                return File(excelData, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { userMsg = "Lỗi xuất khẩu Excel", devMsg = ex.Message });
             }
         }
     }

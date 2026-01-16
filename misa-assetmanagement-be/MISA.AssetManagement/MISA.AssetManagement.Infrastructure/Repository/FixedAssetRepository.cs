@@ -102,7 +102,7 @@ namespace MISA.AssetManagement.Infrastructure.Repository
         /// CreatedBy: DDTOAN (14/01/2026)
         /// EditedBy: DDTOAN (15/01/2026) - Sửa kiểu trả về thành FixedAssetDto
         /// </summary>
-        public async Task<PagingResult<FixedAssetDto>> GetPagingAsync(int pageIndex, int pageSize, string keyword, Guid? departmentId, Guid? categoryId)
+        public async Task<PagingResult<FixedAssetDto>> GetPagingAsync(int pageIndex, int pageSize, string keyword, Guid? departmentId, Guid? categoryId, int trackingYear)
         {
             using (var conn = CreateConnection())
             {
@@ -112,6 +112,10 @@ namespace MISA.AssetManagement.Infrastructure.Repository
                 parameters.Add("p_keyword", keyword);
                 parameters.Add("p_department_id", departmentId);
                 parameters.Add("p_category_id", categoryId);
+
+                // Map tham số mới vào Procedure
+                parameters.Add("p_tracking_year", trackingYear);
+
                 parameters.Add("p_total_records", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
                 var data = await conn.QueryAsync<FixedAssetDto>("Proc_GetFixedAssetsPaging", parameters, commandType: CommandType.StoredProcedure);
@@ -175,6 +179,26 @@ namespace MISA.AssetManagement.Infrastructure.Repository
 
                 // Dùng QueryFirstOrDefaultAsync để trả về null nếu không tìm thấy
                 var result = await conn.QueryFirstOrDefaultAsync<FixedAsset>(sql, new { Id = fixedAssetId });
+                return result;
+            }
+        }
+        /// <summary>
+        /// Xuất dữ liệu phục vụ xuất khẩu Excel
+        /// CreatedBy: DDTOAN (16/01/2026)
+        /// </summary>
+        public async Task<IEnumerable<FixedAssetDto>> GetExportDataAsync(string keyword, Guid? departmentId, Guid? categoryId, int trackingYear)
+        {
+            using (var conn = CreateConnection())
+            {
+                var parameters = new DynamicParameters();
+                // Không cần pageIndex, pageSize nữa
+                parameters.Add("p_keyword", keyword);
+                parameters.Add("p_department_id", departmentId);
+                parameters.Add("p_category_id", categoryId);
+                parameters.Add("p_tracking_year", trackingYear);
+
+                // Gọi Procedure chuyên dụng cho Export
+                var result = await conn.QueryAsync<FixedAssetDto>("Proc_GetFixedAssetsExport", parameters, commandType: CommandType.StoredProcedure);
                 return result;
             }
         }
