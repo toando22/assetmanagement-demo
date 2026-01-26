@@ -151,6 +151,7 @@ watch(() => props.modelValue, (newValue) => {
   resize: both;
   overflow: hidden;
   max-height: calc(100vh - 32px);
+  resize: none;
 }
 
 .ms-popup__header {

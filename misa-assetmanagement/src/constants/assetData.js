@@ -8,6 +8,7 @@
 
 /**
  * Danh sách Bộ phận sử dụng
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const DEPARTMENTS = [
   { code: '01', name: 'Ban Giám hiệu' },
@@ -19,54 +20,56 @@ export const DEPARTMENTS = [
 
 /**
  * Danh sách Loại tài sản cố định
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const ASSET_TYPES = [
-  { 
-    code: '1', 
-    name: 'Nhà, công trình xây dựng', 
-    lifeYears: 80, 
-    depreciationRate: 1.25 
+  {
+    code: '1',
+    name: 'Nhà, công trình xây dựng',
+    lifeYears: 80,
+    depreciationRate: 1.25
   },
-  { 
-    code: '2', 
-    name: 'Vật kiến trúc', 
-    lifeYears: 20, 
-    depreciationRate: 5.00 
+  {
+    code: '2',
+    name: 'Vật kiến trúc',
+    lifeYears: 20,
+    depreciationRate: 5.00
   },
-  { 
-    code: '3', 
-    name: 'Xe ô tô', 
-    lifeYears: 15, 
-    depreciationRate: 6.67 
+  {
+    code: '3',
+    name: 'Xe ô tô',
+    lifeYears: 15,
+    depreciationRate: 6.67
   },
-  { 
-    code: '4', 
-    name: 'Phương tiện vận tải khác (ngoài xe ô tô)', 
-    lifeYears: 20, 
-    depreciationRate: 5.00 
+  {
+    code: '4',
+    name: 'Phương tiện vận tải khác (ngoài xe ô tô)',
+    lifeYears: 20,
+    depreciationRate: 5.00
   },
-  { 
-    code: '5', 
-    name: 'Máy móc, thiết bị', 
-    lifeYears: 5, 
-    depreciationRate: 20.00 
+  {
+    code: '5',
+    name: 'Máy móc, thiết bị',
+    lifeYears: 5,
+    depreciationRate: 20.00
   },
-  { 
-    code: '6', 
-    name: 'Cây lâu năm, súc vật làm việc và/hoặc cho sản phẩm', 
-    lifeYears: 4, 
-    depreciationRate: 25.00 
+  {
+    code: '6',
+    name: 'Cây lâu năm, súc vật làm việc và/hoặc cho sản phẩm',
+    lifeYears: 4,
+    depreciationRate: 25.00
   },
-  { 
-    code: '7', 
-    name: 'Tài sản cố định hữu hình khác', 
-    lifeYears: 10, 
-    depreciationRate: 10.00 
+  {
+    code: '7',
+    name: 'Tài sản cố định hữu hình khác',
+    lifeYears: 10,
+    depreciationRate: 10.00
   },
 ]
 
 /**
  * Lấy thông tin bộ phận theo code
+ * CreatedBy: DDToan - (09/1/2026)
  * @param {string} code - Mã bộ phận
  * @returns {object|null} - Thông tin bộ phận hoặc null
  */
@@ -76,6 +79,7 @@ export const getDepartmentByCode = (code) => {
 
 /**
  * Lấy thông tin loại tài sản theo code
+ * CreatedBy: DDToan - (09/1/2026)
  * @param {string} code - Mã loại tài sản
  * @returns {object|null} - Thông tin loại tài sản hoặc null
  */
@@ -85,6 +89,7 @@ export const getAssetTypeByCode = (code) => {
 
 /**
  * Mock data - Danh sách tài sản
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const MOCK_ASSETS = [
   {
@@ -227,14 +232,14 @@ for (let i = 13; i <= 200; i++) {
   const types = ['Máy vi tính xách tay', 'Máy tính để bàn', 'Thiết bị văn phòng']
   const departments = ['Phòng Hành chính Kế toán', 'Phòng Thư ký', 'Phòng Tài chính Tổng hợp']
   const brands = ['Dell Inspiron 3467', 'Dell Latitude E 5450', 'Máy tính xách tay Fujitsu', 'HP ProBook 450', 'Lenovo ThinkPad']
-  
+
   const randomType = types[Math.floor(Math.random() * types.length)]
   const randomDept = departments[Math.floor(Math.random() * departments.length)]
   const randomBrand = brands[Math.floor(Math.random() * brands.length)]
   const randomQuantity = Math.floor(Math.random() * 20) + 1
   const randomCost = (Math.floor(Math.random() * 10) + 1) * 5000000
   const randomDepreciation = Math.floor(Math.random() * randomCost * 0.3)
-  
+
   additionalAssets.push({
     id: i,
     code: `${Math.random().toString(36).substring(2, 8).toUpperCase()}${i}`,

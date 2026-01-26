@@ -7,14 +7,27 @@ import axiosClient from './axiosClient'
 
 /**
  * Lấy danh sách tài sản
- * @param {object} params - Query parameters (pageIndex, pageSize, keyword, departmentId, categoryId)
+ * @param {object} params - Query parameters (pageIndex, pageSize, keyword, departmentId, categoryId, trackingYear)
+ * @param {number} params.pageIndex - Số trang (mặc định: 1)
+ * @param {number} params.pageSize - Số bản ghi mỗi trang (mặc định: 20)
+ * @param {string} params.keyword - Từ khóa tìm kiếm (optional)
+ * @param {string} params.departmentId - ID bộ phận sử dụng (optional)
+ * @param {string} params.categoryId - ID loại tài sản (optional)
+ * @param {number} params.trackingYear - Năm theo dõi (optional, mặc định: 0 = lấy tất cả)
  * @returns {Promise} - Danh sách tài sản
  * EditBy: DDToan - (17/1/2026) - Cập nhật comment để khớp với backend API params
+ * EditBy: DDToan - (24/1/2026) - Thêm trackingYear vào params để filter theo năm
  */
 export const getFixedAssets = async (params = {}) => {
   try {
+    // Đảm bảo trackingYear có giá trị mặc định là 0 nếu không được truyền vào
+    const requestParams = {
+      ...params,
+      trackingYear: params.trackingYear !== undefined ? params.trackingYear : 0
+    }
+    
     const response = await axiosClient.get('/api/v1/fixed-assets', {
-      params: params
+      params: requestParams
     })
     return response
   } catch (error) {
@@ -25,6 +38,7 @@ export const getFixedAssets = async (params = {}) => {
 
 /**
  * Lấy tài sản theo ID
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {string} id - ID của tài sản
  * @returns {Promise} - Thông tin tài sản
  */
@@ -40,17 +54,18 @@ export const getFixedAssetById = async (id) => {
 
 /**
  * Lấy mã tài sản mới tự động
+ * CreatedBy: DDToan - (14/1/2026)
  * @returns {Promise<string>} - Mã tài sản mới (ví dụ: "TS00001")
  * EditBy: DDToan - (16/1/2026) - Cải thiện parse response và validation
  */
 export const getNewAssetCode = async () => {
   try {
     const response = await axiosClient.get('/api/v1/fixed-assets/new-code')
-    
+
     // Backend trả về Ok(code) → response.data = string
     // Nhưng cần xử lý các trường hợp khác nhau
     let code = ''
-    
+
     if (typeof response === 'string') {
       // Trường hợp 1: Response là string trực tiếp
       code = response.trim()
@@ -70,19 +85,19 @@ export const getNewAssetCode = async () => {
         console.warn('getNewAssetCode: Received empty object response')
       }
     }
-    
+
     // Validate mã: phải là string không rỗng và có format hợp lệ (TS + số)
     if (!code || code.trim() === '') {
       console.error('getNewAssetCode: Invalid response format, received:', response)
       throw new Error('Không thể lấy mã tài sản mới từ server')
     }
-    
+
     // Kiểm tra format cơ bản (TS + số)
     if (!/^TS\d+$/.test(code)) {
       console.warn('getNewAssetCode: Code format may be invalid:', code)
       // Vẫn trả về nếu có giá trị, để backend validate
     }
-    
+
     return code
   } catch (error) {
     console.error('Error in getNewAssetCode:', error)
@@ -93,6 +108,7 @@ export const getNewAssetCode = async () => {
 
 /**
  * Tạo mới tài sản
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {object} data - Dữ liệu tài sản
  * @returns {Promise} - Kết quả tạo mới
  */
@@ -108,6 +124,7 @@ export const createFixedAsset = async (data) => {
 
 /**
  * Cập nhật tài sản
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {string} id - ID của tài sản
  * @param {object} data - Dữ liệu tài sản cần cập nhật
  * @returns {Promise} - Kết quả cập nhật
@@ -124,6 +141,7 @@ export const updateFixedAsset = async (id, data) => {
 
 /**
  * Xóa tài sản
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {string} id - ID của tài sản
  * @returns {Promise} - Kết quả xóa
  */
@@ -139,6 +157,7 @@ export const deleteFixedAsset = async (id) => {
 
 /**
  * Xóa nhiều tài sản
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {Array<string>} ids - Danh sách ID của các tài sản cần xóa
  * @returns {Promise} - Kết quả xóa
  * CreatedBy: DDToan - (17/1/2026)
@@ -157,6 +176,7 @@ export const deleteMultipleFixedAssets = async (ids) => {
 
 /**
  * Nhân bản tài sản - Lấy dữ liệu từ tài sản gốc với mã mới
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {string} sourceId - ID của tài sản gốc cần nhân bản
  * @returns {Promise} - Dữ liệu tài sản đã nhân bản (có mã mới, ID reset)
  * CreatedBy: DDToan - (17/1/2026)
@@ -173,14 +193,26 @@ export const cloneFixedAsset = async (sourceId) => {
 
 /**
  * Xuất danh sách tài sản ra file Excel
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {object} params - Query parameters (keyword, departmentId, categoryId, trackingYear)
+ * @param {string} params.keyword - Từ khóa tìm kiếm (optional)
+ * @param {string} params.departmentId - ID bộ phận sử dụng (optional)
+ * @param {string} params.categoryId - ID loại tài sản (optional)
+ * @param {number} params.trackingYear - Năm theo dõi (optional, mặc định: 0 = lấy tất cả)
  * @returns {Promise<Blob>} - File Excel dưới dạng Blob
- * CreatedBy: DDToan - (17/1/2026)
+ * EditBy: DDToan - (17/1/2026) - Cập nhật comment
+ * EditBy: DDToan - (24/1/2026) - Đảm bảo trackingYear có giá trị mặc định
  */
 export const exportFixedAssetsToExcel = async (params = {}) => {
   try {
+    // Đảm bảo trackingYear có giá trị mặc định là 0 nếu không được truyền vào
+    const requestParams = {
+      ...params,
+      trackingYear: params.trackingYear !== undefined ? params.trackingYear : 0
+    }
+    
     const response = await axiosClient.get('/api/v1/fixed-assets/export', {
-      params: params,
+      params: requestParams,
       responseType: 'blob' // Quan trọng: phải set responseType là 'blob' để nhận file
     })
     return response

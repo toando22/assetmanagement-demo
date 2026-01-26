@@ -17,14 +17,14 @@ export const formatNumber = (value) => {
   if (value === null || value === undefined || value === '') {
     return '0'
   }
-  
+
   // Convert to number nếu là string
   const numValue = typeof value === 'string' ? parseFloat(value.replace(/\./g, '')) : Number(value)
-  
+
   if (isNaN(numValue)) {
     return '0'
   }
-  
+
   // Format với dấu chấm ngăn cách hàng nghìn
   return numValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
@@ -40,11 +40,11 @@ export const parseNumber = (value) => {
   if (!value || value === '') {
     return 0
   }
-  
+
   // Remove dấu chấm và convert to number
   const cleanedValue = value.toString().replace(/\./g, '')
   const numValue = parseFloat(cleanedValue)
-  
+
   return isNaN(numValue) ? 0 : numValue
 }
 
@@ -72,9 +72,9 @@ export const formatDate = (date) => {
   if (!date) {
     return ''
   }
-  
+
   let dateObj
-  
+
   // Nếu là string, parse thành Date
   if (typeof date === 'string') {
     // Hỗ trợ format dd/mm/YYYY
@@ -87,15 +87,15 @@ export const formatDate = (date) => {
   } else {
     dateObj = date
   }
-  
+
   if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
     return ''
   }
-  
+
   const day = String(dateObj.getDate()).padStart(2, '0')
   const month = String(dateObj.getMonth() + 1).padStart(2, '0')
   const year = dateObj.getFullYear()
-  
+
   return `${day}/${month}/${year}`
 }
 
@@ -110,7 +110,7 @@ export const parseDate = (dateString) => {
   if (!dateString || dateString === '') {
     return null
   }
-  
+
   // Hỗ trợ format dd/mm/YYYY
   if (dateString.includes('/')) {
     const parts = dateString.split('/')
@@ -118,9 +118,9 @@ export const parseDate = (dateString) => {
       const day = parseInt(parts[0], 10)
       const month = parseInt(parts[1], 10) - 1 // Month is 0-indexed
       const year = parseInt(parts[2], 10)
-      
+
       const date = new Date(year, month, day)
-      
+
       // Validate date
       if (
         date.getDate() === day &&
@@ -131,13 +131,13 @@ export const parseDate = (dateString) => {
       }
     }
   }
-  
-  // Fallback: try to parse as ISO string
+
+  // Nếu không phải format dd/mm/YYYY, thử parse as ISO string
   const date = new Date(dateString)
   if (!isNaN(date.getTime())) {
     return date
   }
-  
+
   return null
 }
 
@@ -152,13 +152,13 @@ export const getYearFromDate = (date) => {
   if (!date) {
     return null
   }
-  
+
   const dateObj = typeof date === 'string' ? parseDate(date) : date
-  
+
   if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
     return null
   }
-  
+
   return dateObj.getFullYear()
 }
 
@@ -174,13 +174,13 @@ export const formatDecimal = (value, decimals = 2) => {
   if (value === null || value === undefined || value === '') {
     return '0'
   }
-  
+
   const numValue = typeof value === 'string' ? parseFloat(value.replace(',', '.')) : Number(value)
-  
+
   if (isNaN(numValue)) {
     return '0'
   }
-  
+
   // Format với dấu phẩy cho phần thập phân
   return numValue.toFixed(decimals).replace('.', ',')
 }
@@ -196,10 +196,10 @@ export const parseDecimal = (value) => {
   if (!value || value === '') {
     return 0
   }
-  
+
   // Replace dấu phẩy bằng dấu chấm và parse
   const cleanedValue = value.toString().replace(',', '.')
   const numValue = parseFloat(cleanedValue)
-  
+
   return isNaN(numValue) ? 0 : numValue
 }

@@ -39,19 +39,25 @@
   
   CreatedBy: DDToan - (09/1/2026)
   
-  EditBy: 
+  EditBy: DDToan - (24/1/2026) - Thêm yearFilter state và provide cho children
 */
 
-import { ref, watch } from 'vue'
+import { ref, watch, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import TheSidebar from './TheSideBar.vue'
 import TheHeader from './TheHeader.vue'
+import { useYearFilter } from '@/composables/useYearFilter'
 
 // State
 const pageTitle = ref('Danh sách tài sản')
 
 // Router
 const route = useRoute()
+
+// Year Filter: Quản lý state năm filter và provide cho children components
+// CreatedBy: DDToan - (24/1/2026)
+const yearFilter = useYearFilter()
+provide('yearFilter', yearFilter)
 
 /*
   Mô tả: Cập nhật page title khi route thay đổi

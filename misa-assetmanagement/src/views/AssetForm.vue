@@ -9,10 +9,12 @@
   - Unsaved changes tracking
   - TabOrder đúng
   - Resize form
+  - Dropdown hiển thị "mã - tên" cho bộ phận và loại tài sản
   
   CreatedBy: DDToan - (09/1/2026)
   
   EditBy: DDToan - (11/1/2026) - Nâng cấp với validation, auto-calculation, dialogs
+  EditBy: DDTOAN - (18/1/2026) - Thay đổi dropdown hiển thị "mã - tên" thay vì chỉ mã
 -->
 
 <template>
@@ -35,7 +37,7 @@
         <div class="asset-form__content">
           <!-- Row 1: Mã tài sản, Tên tài sản -->
           <div class="asset-form__row">
-            <div class="asset-form__field">
+            <div class= " asset-form__field  ">
               <MsInput
                 v-model="formData.assetCode"
                 label="Mã tài sản"
@@ -45,9 +47,10 @@
                 :error="fieldErrors.assetCode"
                 :error-message="fieldErrors.assetCode"
                 @blur="handleAssetCodeBlur"
+                
               />
             </div>
-            <div class="asset-form__field">
+            <div class=" asset-form__field">
               <MsInput
                 v-model="formData.assetName"
                 label="Tên tài sản"
@@ -123,7 +126,7 @@
                 :error-message="fieldErrors.quantity"
               />
             </div>
-            <div class="asset-form__field">
+            <div class="asset-form__field asset-form__field--currency">
               <MsInputCurrency
                 v-model="formData.originalCost"
                 label="Nguyên giá"
@@ -134,11 +137,11 @@
                 :error-message="fieldErrors.originalCost"
               />
             </div>
-            <div class="asset-form__field">
+            <div class="asset-form__field asset-form__field--number">
               <MsInput
                 v-model="formData.depreciationRate"
                 label="Tỷ lệ hao mòn (%)"
-                placeholder="Nhập tỷ lệ hao mòn"
+                placeholder="0"
                 :required="true"
                 tabindex="7"
                 :error="fieldErrors.depreciationRate"
@@ -165,7 +168,7 @@
                 tabindex="9"
               />
             </div>
-            <div class="asset-form__field">
+            <div class="asset-form__field asset-form__field--number">
               <MsInput
                 v-model="formData.trackingYear"
                 label="Năm theo dõi"
@@ -177,7 +180,7 @@
           </div>
 
           <!-- Row 6: Số năm sử dụng, Giá trị hao mòn năm -->
-          <div class="asset-form__row">
+          <div class="asset-form__row asset-form__row--three">
             <div class="asset-form__field">
               <MsInputNumber
                 v-model="formData.yearsOfUse"
@@ -191,7 +194,7 @@
                 :error-message="fieldErrors.yearsOfUse"
               />
             </div>
-            <div class="asset-form__field">
+            <div class="asset-form__field asset-form__field--currency">
               <MsInputCurrency
                 v-model="formData.annualDepreciationValue"
                 label="Giá trị hao mòn năm"
@@ -380,18 +383,23 @@ const loadDepartments = async () => {
 }
 
 // Dropdown options từ API (thay thế constants)
+// EditBy: DDToan - (18/1/2026) - Hiển thị "mã - tên" thay vì chỉ mã
 const departmentOptions = computed(() => {
   if (departments.value.length > 0) {
     // Dùng data từ API
-    return departments.value.map(dept => ({
-      value: dept.departmentCode || dept.department_code || dept.code,
-      label: dept.departmentCode || dept.department_code || dept.code
-    }))
+    return departments.value.map(dept => {
+      const code = dept.departmentCode || dept.department_code || dept.code
+      const name = dept.departmentName || dept.department_name || dept.name || ''
+      return {
+        value: code,
+        label: name ? `${code} - ${name}` : code
+      }
+    })
   } else {
     // Fallback về constants nếu chưa load được
     return DEPARTMENTS.map(dept => ({
       value: dept.code,
-      label: dept.code
+      label: dept.name ? `${dept.code} - ${dept.name}` : dept.code
     }))
   }
 })
@@ -530,18 +538,23 @@ const loadAssetCategories = async () => {
 }
 
 // Dropdown options từ API (thay thế constants)
+// EditBy: DDToan - (18/1/2026) - Hiển thị "mã - tên" thay vì chỉ mã
 const assetTypeOptions = computed(() => {
   if (assetCategories.value.length > 0) {
     // Dùng data từ API
-    return assetCategories.value.map(cat => ({
-      value: cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code,
-      label: cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code
-    }))
+    return assetCategories.value.map(cat => {
+      const code = cat.fixedAssetCategoryCode || cat.fixed_asset_category_code || cat.code
+      const name = cat.fixedAssetCategoryName || cat.fixed_asset_category_name || cat.name || ''
+      return {
+        value: code,
+        label: name ? `${code} - ${name}` : code
+      }
+    })
   } else {
     // Fallback về constants nếu chưa load được
     return ASSET_TYPES.map(type => ({
       value: type.code,
-      label: type.code
+      label: type.name ? `${type.code} - ${type.name}` : type.code
     }))
   }
 })
@@ -1108,5 +1121,37 @@ const handleCancel = () => {
 .asset-form__field :deep(.ms-dropdown--open .ms-dropdown__trigger)::after {
   -webkit-mask-position: -28px -338px !important; /* icon-chevron-up-toolbar */
   mask-position: -28px -338px !important;
+}
+/* Căn trái cho input mã tài sản */
+.asset-form__field--asset-code :deep(.ms-input__field) {
+  text-align: left;
+}
+/* Căn phải cho các input số (MsInputNumber) */
+.asset-form__field :deep(.ms-input-number__field) {
+  text-align: right;
+}
+
+/* Đảm bảo placeholder của input số cũng căn phải khi có giá trị */
+.asset-form__field :deep(.ms-input-number__field::placeholder) {
+  text-align: right;
+}
+/* Căn phải placeholder cho input currency (Nguyên giá, Giá trị hao mòn năm) */
+.asset-form__field--currency :deep(.ms-input-currency__field::placeholder) {
+  text-align: right;
+}
+
+/* Căn phải cho input số (Tỷ lệ hao mòn, Năm theo dõi) */
+.asset-form__field--number :deep(.ms-input__field) {
+  text-align: right;
+}
+
+.asset-form__field--number :deep(.ms-input__field::placeholder) {
+  text-align: right;
+}
+/* Bỏ italic cho placeholder số để không bị cắt góc */
+.asset-form__field :deep(.ms-input-number__field::placeholder),
+.asset-form__field--currency :deep(.ms-input-currency__field::placeholder),
+.asset-form__field--number :deep(.ms-input__field::placeholder) {
+  font-style: normal; /* Bỏ nghiêng */
 }
 </style>

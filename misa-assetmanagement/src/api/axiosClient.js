@@ -7,17 +7,16 @@ import axios from 'axios'
 
 // Tạo axios instance với config mặc định
 const axiosClient = axios.create({
-  baseURL: 'https://localhost:7038', 
-  timeout: 10000, // 10 giây
+  baseURL: 'https://localhost:7038',
+  timeout: 10000000, // 10 giây
   headers: {
     'Content-Type': 'application/json'
   }
 })
 
-// Request interceptor - có thể thêm token, logging, etc.
+// xử lý request
 axiosClient.interceptors.request.use(
   (config) => {
-    // Có thể thêm token vào đây sau này
     // if (token) {
     //   config.headers.Authorization = `Bearer ${token}`
     // }
@@ -28,7 +27,7 @@ axiosClient.interceptors.request.use(
   }
 )
 
-// Response interceptor - xử lý response và error
+// xử lý response và error
 axiosClient.interceptors.response.use(
   (response) => {
     // Trả về data trực tiếp từ response

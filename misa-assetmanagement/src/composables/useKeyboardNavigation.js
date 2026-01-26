@@ -24,7 +24,7 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 export function useKeyboardNavigation(options = {}) {
   const {
     items = ref([]),
-    onSelect = () => {},
+    onSelect = () => { },
     getItemId = (item) => item.id,
   } = options
 
@@ -148,7 +148,7 @@ export function useKeyboardNavigation(options = {}) {
     }
   }
 
-  // Mount/Unmount event listeners
+  // Mount/Unmount lắng nghe sự kiện
   onMounted(() => {
     document.addEventListener('keydown', handleKeyDown)
   })

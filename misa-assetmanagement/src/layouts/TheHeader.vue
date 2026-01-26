@@ -104,10 +104,10 @@
   
   CreatedBy: DDToan - (09/1/2026)
   
-  EditBy: 
+  EditBy: DDToan - (24/1/2026) - Kết nối yearFilter state với dropdown năm
 */
 
-import { ref, computed } from 'vue'
+import { ref, computed, watch, inject } from 'vue'
 import MsDropdown from '@/components/base/ms-dropdown/MsDropdown.vue'
 
 // Props
@@ -119,22 +119,21 @@ const props = defineProps({
 })
 
 // State
-const selectedYear = ref(2021)
 const isUserMenuOpen = ref(false)
 
-// Computed: Danh sách năm (từ năm hiện tại trở về trước 10 năm)
-const years = computed(() => {
+// Inject yearFilter từ MainLayout (giống như AssetList)
+// CreatedBy: DDToan - (24/1/2026)
+const yearFilter = inject('yearFilter', null)
+
+// Sử dụng yearFilter nếu có, nếu không thì fallback về local state
+const selectedYear = yearFilter ? yearFilter.selectedYear : ref(new Date().getFullYear())
+const yearOptions = yearFilter ? yearFilter.yearOptions : computed(() => {
   const currentYear = new Date().getFullYear()
   const yearsList = []
   for (let i = 0; i <= 10; i++) {
     yearsList.push(currentYear - i)
   }
-  return yearsList
-})
-
-// Options cho dropdown năm - chỉ hiển thị năm trong dropdown
-const yearOptions = computed(() => {
-  return years.value.map(year => ({
+  return yearsList.map(year => ({
     value: year,
     label: year.toString()
   }))
@@ -391,7 +390,7 @@ const handleLogout = () => {
 
 /* Divider */
 .header__divider {
-  width: 1px;
+  /* width: 1px; */
   height: 24px;
   background-color: var(--color-border);
 }

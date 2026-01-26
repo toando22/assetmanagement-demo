@@ -83,6 +83,7 @@ defineEmits(['click'])
   color: #ffffff;
   border-radius: 3px;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, .16);
+  width: 86px;
 }
 
 .ms-button--primary:hover:not(:disabled) {
@@ -109,6 +110,7 @@ defineEmits(['click'])
   background-color: #ffffff;
   color: #1aa4c8;
   border-color: #1aa4c8;
+  width: 86px;
 }
 
 .ms-button--secondary:hover:not(:disabled) {

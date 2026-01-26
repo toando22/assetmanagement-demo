@@ -1,7 +1,5 @@
 <!--
-  Mô tả: Dropdown/Select component
-  Features: Regular dropdown, Dropdown with checkbox, Table dropdown
-  States: Default, Hover, Active, Focus, Open
+  Mô tả: dropdown component
   
   CreatedBy: DDToan - (09/1/2026)
 -->
@@ -25,8 +23,8 @@
             :class="{ 'ms-dropdown__item--selected': option.value === modelValue }"
             @click="selectOption(option)"
           >
-            <i v-if="option.value === modelValue" class="ms-dropdown__check icon icon-check"></i>
-            {{ option.label }}
+            <i class="ms-dropdown__check icon icon-check" :class="{ 'ms-dropdown__check--hidden': option.value !== modelValue }"></i>
+            <span class="ms-dropdown__item-text">{{ option.label }}</span>
           </div>
         </div>
 
@@ -92,8 +90,8 @@
               :class="{ 'ms-dropdown__item--selected': option.value === modelValue }"
               @click="selectOption(option)"
             >
-              <i v-if="option.value === modelValue" class="ms-dropdown__check icon icon-check"></i>
-              {{ option.label }}
+              <i class="ms-dropdown__check icon icon-check" :class="{ 'ms-dropdown__check--hidden': option.value !== modelValue }"></i>
+              <span class="ms-dropdown__item-text">{{ option.label }}</span>
             </div>
           </div>
 
@@ -480,9 +478,10 @@ onBeforeUnmount(() => {
 .ms-dropdown__item {
   height: 32px;
   padding: 0 12px;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 16px 1fr;
   gap: 8px;
+  align-items: center;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
   font-weight: 400;
@@ -508,6 +507,18 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   color: #1aa4c8;
+  visibility: visible;
+  flex-shrink: 0;
+}
+
+.ms-dropdown__check--hidden {
+  visibility: hidden;
+}
+
+.ms-dropdown__item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Checkbox variant */

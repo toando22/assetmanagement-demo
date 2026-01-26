@@ -8,6 +8,7 @@
 
 /**
  * Enum cho trạng thái form
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const FormMode = {
   ADD: 'add',
@@ -18,6 +19,7 @@ export const FormMode = {
 
 /**
  * Enum cho trạng thái API request
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const RequestStatus = {
   IDLE: 'idle',
@@ -28,6 +30,7 @@ export const RequestStatus = {
 
 /**
  * Enum cho loại thông báo
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const NotificationType = {
   SUCCESS: 'success',
@@ -38,6 +41,7 @@ export const NotificationType = {
 
 /**
  * Enum cho kích thước component
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const ComponentSize = {
   XS: 'xs',
@@ -49,6 +53,7 @@ export const ComponentSize = {
 
 /**
  * Enum cho căn lề
+ * CreatedBy: DDToan - (09/1/2026)
  */
 export const TextAlign = {
   LEFT: 'left',

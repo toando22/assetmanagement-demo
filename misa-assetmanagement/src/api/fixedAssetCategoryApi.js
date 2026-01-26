@@ -7,6 +7,7 @@ import axiosClient from './axiosClient'
 
 /**
  * Lấy danh sách tất cả loại tài sản
+ * CreatedBy: DDToan - (14/1/2026)
  * @returns {Promise} - Danh sách loại tài sản
  */
 export const getFixedAssetCategories = async () => {
@@ -21,6 +22,7 @@ export const getFixedAssetCategories = async () => {
 
 /**
  * Lấy loại tài sản theo ID
+ * CreatedBy: DDToan - (14/1/2026)
  * @param {string} id - ID của loại tài sản
  * @returns {Promise} - Thông tin loại tài sản
  */

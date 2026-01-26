@@ -19,21 +19,21 @@ import { parseNumber, parseDecimal } from './format.js'
  */
 export const validateAssetForm = (formData, existingAssets = [], currentAssetCode = '') => {
   const errors = []
-  
-  // 1. Validate required fields
+
+  // 1. Validate các trường bắt buộc
   const requiredErrors = validateRequiredFields(formData)
   if (requiredErrors.length > 0) {
     errors.push(...requiredErrors)
   }
-  
-  // 2. Validate business rules (chỉ validate nếu không có lỗi required)
+
+  // 2. Validate các quy tắc kinh doanh
   if (requiredErrors.length === 0) {
     const businessErrors = validateBusinessRules(formData)
     if (businessErrors.length > 0) {
       errors.push(...businessErrors)
     }
   }
-  
+
   // 3. Validate trùng mã tài sản (chỉ khi thêm mới hoặc đổi mã)
   if (formData.assetCode && formData.assetCode !== currentAssetCode) {
     const duplicateError = validateDuplicateCode(formData.assetCode, existingAssets)
@@ -41,7 +41,7 @@ export const validateAssetForm = (formData, existingAssets = [], currentAssetCod
       errors.push(duplicateError)
     }
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors
@@ -68,7 +68,7 @@ export const validateRequiredFields = (formData) => {
     { key: 'depreciationRate', label: 'Tỷ lệ hao mòn' },
     { key: 'trackingYear', label: 'Năm theo dõi' }
   ]
-  
+
   requiredFields.forEach(field => {
     const value = formData[field.key]
     if (!value || value === '' || value === 0 || value === '0') {
@@ -78,7 +78,7 @@ export const validateRequiredFields = (formData) => {
       })
     }
   })
-  
+
   return errors
 }
 
@@ -91,7 +91,7 @@ export const validateRequiredFields = (formData) => {
  */
 export const validateBusinessRules = (formData) => {
   const errors = []
-  
+
   // 1. Validate Số lượng phải là số nguyên dương
   const quantity = Number(formData.quantity)
   if (isNaN(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
@@ -100,15 +100,15 @@ export const validateBusinessRules = (formData) => {
       message: 'Số lượng phải là số nguyên dương.'
     })
   }
-  
+
   // 2. Validate Tỷ lệ hao mòn = 1 / Số năm sử dụng
   const yearsOfUse = Number(formData.yearsOfUse)
   const depreciationRate = parseDecimal(formData.depreciationRate)
-  
+
   if (yearsOfUse > 0 && depreciationRate > 0) {
     const expectedRate = (1 / yearsOfUse) * 100
     const rateDifference = Math.abs(depreciationRate - expectedRate)
-    
+
     // Cho phép sai lệch 0.01% (do làm tròn)
     if (rateDifference > 0.01) {
       errors.push({
@@ -117,18 +117,18 @@ export const validateBusinessRules = (formData) => {
       })
     }
   }
-  
+
   // 3. Validate Hao mòn năm <= Nguyên giá
   const originalCost = parseNumber(formData.originalCost)
   const annualDepreciation = parseNumber(formData.annualDepreciationValue)
-  
+
   if (originalCost > 0 && annualDepreciation > originalCost) {
     errors.push({
       field: 'annualDepreciationValue',
       message: 'Hao mòn năm phải nhỏ hơn hoặc bằng nguyên giá.'
     })
   }
-  
+
   // 4. Validate Nguyên giá phải là số dương
   if (originalCost <= 0) {
     errors.push({
@@ -136,7 +136,7 @@ export const validateBusinessRules = (formData) => {
       message: 'Nguyên giá phải lớn hơn 0.'
     })
   }
-  
+
   return errors
 }
 
@@ -152,18 +152,18 @@ export const validateDuplicateCode = (assetCode, existingAssets = []) => {
   if (!assetCode || assetCode === '') {
     return null
   }
-  
-  const isDuplicate = existingAssets.some(asset => 
+
+  const isDuplicate = existingAssets.some(asset =>
     asset.code && asset.code.toString().toLowerCase() === assetCode.toString().toLowerCase()
   )
-  
+
   if (isDuplicate) {
     return {
       field: 'assetCode',
       message: 'Mã tài sản đã tồn tại trong hệ thống.'
     }
   }
-  
+
   return null
 }
 
@@ -177,14 +177,14 @@ export const validateDuplicateCode = (assetCode, existingAssets = []) => {
  */
 export const validateNumber = (value, allowDecimal = false) => {
   if (value === null || value === undefined || value === '') {
-    return true // Empty is valid (will be handled by required validation)
+    return true // Trống là hợp lệ (sẽ được xử lý bởi validation trường bắt buộc)
   }
-  
+
   const stringValue = value.toString()
-  
+
   // Remove dấu chấm (ngăn cách hàng nghìn) và dấu phẩy (thập phân)
   const cleanedValue = stringValue.replace(/\./g, '').replace(',', '.')
-  
+
   if (allowDecimal) {
     // Cho phép số thập phân
     return /^\d+\.?\d*$/.test(cleanedValue)
@@ -203,31 +203,31 @@ export const validateNumber = (value, allowDecimal = false) => {
  */
 export const validateDate = (dateString) => {
   if (!dateString || dateString === '') {
-    return true // Empty is valid (will be handled by required validation)
+    return true // Trống là hợp lệ (sẽ được xử lý bởi validation trường bắt buộc)
   }
-  
+
   // Check format dd/mm/YYYY
   const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/
   const match = dateString.match(dateRegex)
-  
+
   if (!match) {
     return false
   }
-  
+
   const day = parseInt(match[1], 10)
   const month = parseInt(match[2], 10)
   const year = parseInt(match[3], 10)
-  
-  // Validate range
+
+  // Validate khoảng thời gian
   if (month < 1 || month > 12) {
     return false
   }
-  
+
   if (day < 1 || day > 31) {
     return false
   }
-  
-  // Validate actual date
+
+  // Validate ngày tháng năm
   const date = new Date(year, month - 1, day)
   if (
     date.getDate() !== day ||
@@ -236,6 +236,6 @@ export const validateDate = (dateString) => {
   ) {
     return false
   }
-  
+
   return true
 }
