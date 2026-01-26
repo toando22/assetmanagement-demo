@@ -17,33 +17,36 @@ namespace MISA.AssetManagement.Api.Controllers
             {
                 _baseService = baseService;
             }
-            #endregion
+        #endregion
 
-            #region Methods
-            /// <summary>
-            /// Lấy toàn bộ danh sách
-            /// </summary>
-            [HttpGet]
+        #region Methods
+        /// <summary>
+        /// Lấy toàn bộ danh sách
+        /// CreatedBy: DDTOAN (14/01/2026)
+        /// </summary>
+        [HttpGet]
             public virtual async Task<IActionResult> GetAllAsync()
             {
                 var entities = await _baseService.GetAllAsync();
                 return Ok(entities);
             }
 
-            /// <summary>
-            /// Lấy bản ghi theo ID
-            /// </summary>
-            [HttpGet("{id}")]
+        /// <summary>
+        /// Lấy bản ghi theo ID
+        /// CreatedBy: DDTOAN (14/01/2026)
+        /// </summary>
+        [HttpGet("{id}")]
             public virtual async Task<IActionResult> GetByIdAsync(Guid id)
             {
                 var entity = await _baseService.GetByIdAsync(id);
                 return Ok(entity);
             }
 
-            /// <summary>
-            /// Thêm mới bản ghi
-            /// </summary>
-            [HttpPost]
+        /// <summary>
+        /// Thêm mới bản ghi
+        /// CreatedBy: DDTOAN (14/01/2026)
+        /// </summary>
+        [HttpPost]
             public virtual async Task<IActionResult> InsertAsync([FromBody] T entity)
             {
                 var result = await _baseService.InsertServiceAsync(entity);
@@ -51,20 +54,22 @@ namespace MISA.AssetManagement.Api.Controllers
                 return StatusCode(StatusCodes.Status201Created, result);
             }
 
-            /// <summary>
-            /// Cập nhật bản ghi
-            /// </summary>
-            [HttpPut("{id}")]
+        /// <summary>
+        /// Cập nhật bản ghi
+        /// CreatedBy: DDTOAN (14/01/2026)
+        /// </summary>
+        [HttpPut("{id}")]
             public virtual async Task<IActionResult> UpdateAsync(Guid id, [FromBody] T entity)
             {
                 var result = await _baseService.UpdateServiceAsync(id, entity);
                 return Ok(result);
             }
 
-            /// <summary>
-            /// Xóa bản ghi
-            /// </summary>
-            [HttpDelete("{id}")]
+        /// <summary>
+        /// Xóa bản ghi
+        /// CreatedBy: DDTOAN (14/01/2026)
+        /// </summary>
+        [HttpDelete("{id}")]
             public virtual async Task<IActionResult> DeleteAsync(Guid id)
             {
                 var result = await _baseService.DeleteAsync(id);

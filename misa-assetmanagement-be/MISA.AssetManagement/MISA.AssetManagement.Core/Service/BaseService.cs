@@ -48,6 +48,7 @@ namespace MISA.AssetManagement.Core.Service
 
         /// <summary>
         /// Hàm validate dữ liệu đầu vào dựa trên Attribute (Required, Length...)
+        /// CreatedBy: DDTOAN (14/01/2026)
         /// </summary>
         private void ValidateData(T entity)
         {
@@ -76,6 +77,7 @@ namespace MISA.AssetManagement.Core.Service
 
         /// <summary>
         /// Hàm hook để lớp con viết logic nghiệp vụ riêng (Check trùng, check ngày tháng...)
+        /// CreatedBy: DDTOAN (14/01/2026)
         /// </summary>
         protected virtual Task ValidateBusinessAsync(T entity, bool isInsert, Guid? id = null)
         {

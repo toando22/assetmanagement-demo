@@ -13,10 +13,37 @@ namespace MISA.AssetManagement.Core.DTOs
     /// CreatedBy: DDTOAN (15/01/2026)
     /// EditedBy: DDTOAN (20/06/2024) - Thêm các trường Hao mòn lũy kế, Giá trị còn lại
     /// </summary>
-    public class FixedAssetDto : FixedAsset
+    public class FixedAssetDto 
         {
-            public string DepartmentName { get; set; }
-            public string FixedAssetCategoryName { get; set; }
+        public Guid FixedAssetId { get; set; }
+
+        public string FixedAssetCode { get; set; }
+
+        public string FixedAssetName { get; set; }
+
+        public Guid DepartmentId { get; set; }
+
+        public Guid FixedAssetCategoryId { get; set; }
+
+        public DateTime FixedAssetPurchaseDate { get; set; }
+
+        public DateTime FixedAssetStartUseDate { get; set; }
+
+        public decimal FixedAssetOriginalCost { get; set; }
+
+        public int FixedAssetQuantity { get; set; }
+
+        public decimal FixedAssetDepreciationRate { get; set; }
+
+        public int FixedAssetTrackingYear { get; set; }
+
+        public int FixedAssetYearsOfUse { get; set; }
+
+        public int FixedAssetProductionYear { get; set; }
+
+        public decimal FixedAssetAnnualDepreciationValue { get; set; }
+        public required string DepartmentName { get; set; }
+            public required string FixedAssetCategoryName { get; set; }
 
         /// <summary>
         /// Hao mòn/Khấu hao lũy kế

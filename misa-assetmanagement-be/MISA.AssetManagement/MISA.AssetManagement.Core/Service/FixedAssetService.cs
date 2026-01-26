@@ -67,7 +67,15 @@ namespace MISA.AssetManagement.Core.Service
             if (ids == null || ids.Count == 0) return 0;
             return await _fixedAssetRepository.DeleteMultiAsync(ids);
         }
-
+        /// <summary>
+        /// Validate nghiệp vụ riêng của Tài sản
+        /// CreatedBy: DDTOAN (14/01/2026)
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="isInsert"></param>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        /// <exception cref="MISAValidateException"></exception>
         protected override async Task ValidateBusinessAsync(FixedAsset entity, bool isInsert, Guid? id = null)
         {
             var errors = new Dictionary<string, string>();

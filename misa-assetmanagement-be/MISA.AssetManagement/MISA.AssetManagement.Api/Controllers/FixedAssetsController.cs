@@ -23,6 +23,7 @@ namespace MISA.AssetManagement.Api.Controllers
 
         /// <summary>
         /// Lấy danh sách phân trang
+        /// CreatedBy: DDTOAN (14/01/2026)
         /// EditedBy: DDTOAN (15/01/2026) - Sửa kiểu trả về thành FixedAssetDto
         /// </summary>
         [HttpGet]
